@@ -1,0 +1,104 @@
+{
+ "events": [
+  {
+   "id": "5001",
+   "name": "Demo Fight Night: Vale vs Okoro",
+   "date": "2026-11-16T23:00Z",
+   "venue": {
+    "fullName": "Demo Apex"
+   },
+   "competitions": [
+    {
+     "id": "5001-1",
+     "date": "2026-11-16T20:00:00Z",
+     "status": {
+      "type": {
+       "name": "STATUS_FINAL",
+       "state": "post",
+       "completed": true
+      }
+     },
+     "competitors": [
+      {
+       "order": 1,
+       "winner": true,
+       "athlete": {
+        "displayName": "Tomas Reyes-Hale"
+       }
+      },
+      {
+       "order": 2,
+       "winner": false,
+       "athlete": {
+        "displayName": "Ivo Brandt"
+       }
+      }
+     ]
+    },
+    {
+     "id": "5001-2",
+     "date": "2026-11-16T21:00:00Z",
+     "status": {
+      "type": {
+       "name": "STATUS_SCHEDULED",
+       "state": "pre",
+       "completed": false
+      }
+     },
+     "competitors": [
+      {
+       "order": 2,
+       "athlete": {
+        "displayName": "Kenji Arai"
+       }
+      },
+      {
+       "order": 1,
+       "athlete": {
+        "displayName": "Luis Ferro"
+       }
+      }
+     ],
+     "odds": [
+      {
+       "provider": {
+        "name": "Demo Book"
+       },
+       "homeTeamOdds": {
+        "moneyLine": -180
+       },
+       "awayTeamOdds": {
+        "moneyLine": 150
+       }
+      }
+     ]
+    },
+    {
+     "id": "5001-3",
+     "date": "2026-11-17T01:00:00Z",
+     "status": {
+      "type": {
+       "name": "STATUS_SCHEDULED",
+       "state": "pre",
+       "completed": false
+      }
+     },
+     "competitors": [
+      {
+       "order": 1,
+       "athlete": {
+        "displayName": "Marcus Vale"
+       }
+      },
+      {
+       "order": 2,
+       "athlete": {
+        "displayName": "Dario Okoro"
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

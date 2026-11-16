@@ -1,0 +1,22 @@
+{
+ "injuries": [
+  {
+   "displayName": "Harbor City Anglers",
+   "injuries": [
+    {
+     "athlete": {
+      "displayName": "Sam Rook",
+      "position": {
+       "abbreviation": "G"
+      }
+     },
+     "status": "Out"
+    }
+   ]
+  },
+  {
+   "displayName": "Lakeview Herons",
+   "injuries": []
+  }
+ ]
+}

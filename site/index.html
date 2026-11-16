@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Pre-game picks board</title>
+<meta name="description" content="Pre-game analysis and picks, posted automatically before every game and fight card.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Big+Shoulders+Display:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="page">
+  <header class="top">
+    <div>
+      <h1>Pre-game picks</h1>
+      <p class="sub">Analysis posts about 30 minutes before each team game and 90 minutes before the first fight on a card.</p>
+    </div>
+    <button class="status-btn" id="statusBtn" aria-expanded="false" aria-controls="status">Status</button>
+  </header>
+
+  <div id="banner" class="banner" role="status" hidden></div>
+
+  <section class="ledger" id="ledger" aria-label="Record"></section>
+
+  <nav class="chips" id="chips" aria-label="Filter by sport"></nav>
+
+  <main>
+    <section id="top" aria-labelledby="topH"></section>
+    <section id="slate" aria-labelledby="slateH"></section>
+  </main>
+
+  <section class="status" id="status" hidden aria-label="System status"></section>
+
+  <details class="how">
+    <summary>How picks are made and graded</summary>
+    <p>Each game gets a facts packet (market line, rest, recent form, injuries when available). A small model nudges the no-vig market probability; the edge is the model’s win chance minus the market’s. A pick is a PLAY only when the edge, the data coverage and the price all clear the thresholds; otherwise it is a PASS and nothing is recorded.</p>
+    <p>Picks are locked when posted and never edited. A result is W, L or V (void: push, tie or draw on a moneyline, cancelled, or postponed more than 48 hours). Win % leaves voids out. Profit is in units at the price posted. Top picks are marked at posting time, up to five a day.</p>
+    <p>This is an experimental baseline that has not been backtested. Treat every pick as unproven until the record says otherwise.</p>
+  </details>
+
+  <footer>
+    <p>Informational only, not betting advice, and nothing here is guaranteed. 21+. If gambling is a problem, call 1-800-GAMBLER.</p>
+  </footer>
+</div>
+<script src="app.js"></script>
+</body>
+</html>

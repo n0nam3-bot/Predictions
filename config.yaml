@@ -1,0 +1,42 @@
+# Tunable settings. Change here, upload as a zip, no code edits needed.
+timezone: America/New_York
+
+timing:                       # minutes before scheduled start
+  team: {due_minutes: 35, late_after_minutes: 10}   # target T-30; DUE at T-35; LATE once under T-10
+  mma:  {due_minutes: 95, late_after_minutes: 60}   # target T-90 before the first bout of the card
+
+thresholds:
+  play_min_edge: 0.025        # model win% minus no-vig market win%
+  play_min_coverage: 0.80     # share of critical inputs actually available
+  edge_error_cap: 0.10        # an edge this large is treated as a data or model error -> PASS
+  top_min_edge: 0.04
+  top_min_coverage: 0.90
+  top_per_day: 5              # designated at publish time so a locked pick never changes
+  max_units: 3
+
+model:
+  anchor_shrink: 0.5          # how far the model may move away from the no-vig market
+  logit_weights:              # v0 baseline, unvalidated (see docs/METHODOLOGY.md)
+    rest_day_diff: 0.02
+    back_to_back: 0.05
+    recent_form: 0.04
+
+coverage_weights:             # share of the coverage score each input provides
+  market: 0.40
+  schedule_rest: 0.20
+  recent_form: 0.15
+  injuries: 0.25
+
+sports:
+  nfl:  {kind: team, espn: [football, nfl]}
+  nba:  {kind: team, espn: [basketball, nba]}
+  nhl:  {kind: team, espn: [hockey, nhl]}
+  mlb:  {kind: team, espn: [baseball, mlb]}
+  ufc:  {kind: bout, espn: [mma, ufc]}
+  dwcs: {kind: bout, espn: [mma, dwcs]}   # slug unverified: run the source audit
+
+llm:                          # free tiers only, tried in this order. Groq is not used.
+  gemini:     {model: gemini-2.5-flash, daily_cap: 200}
+  mistral:    {model: mistral-small-latest, daily_cap: 300}
+  cloudflare: {model: "@cf/meta/llama-3.1-8b-instruct", daily_cap: 100}
+  openrouter: {model: "openrouter/free", daily_cap: 40}

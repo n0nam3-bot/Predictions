@@ -1,0 +1,187 @@
+{
+ "events": [
+  {
+   "id": "9001",
+   "date": "2026-11-16T00:30Z",
+   "name": "Lakeview Herons at Harbor City Anglers",
+   "shortName": "LAK @ HAR",
+   "competitions": [
+    {
+     "venue": {
+      "fullName": "Harbor Arena"
+     },
+     "status": {
+      "type": {
+       "name": "STATUS_SCHEDULED",
+       "state": "pre",
+       "completed": false
+      }
+     },
+     "competitors": [
+      {
+       "homeAway": "home",
+       "score": "0",
+       "team": {
+        "displayName": "Harbor City Anglers",
+        "abbreviation": "HAR"
+       },
+       "records": [
+        {
+         "summary": "7-3"
+        }
+       ]
+      },
+      {
+       "homeAway": "away",
+       "score": "0",
+       "team": {
+        "displayName": "Lakeview Herons",
+        "abbreviation": "LAK"
+       },
+       "records": [
+        {
+         "summary": "5-5"
+        }
+       ]
+      }
+     ],
+     "odds": [
+      {
+       "provider": {
+        "name": "Demo Book"
+       },
+       "details": "HAR -3.5",
+       "overUnder": 221.5,
+       "moneyline": {
+        "home": {
+         "close": {
+          "odds": "-160"
+         },
+         "open": {
+          "odds": "-150"
+         }
+        },
+        "away": {
+         "close": {
+          "odds": "+135"
+         }
+        }
+       },
+       "pointSpread": {
+        "home": {
+         "close": {
+          "line": "-3.5",
+          "odds": "-110"
+         }
+        }
+       },
+       "total": {
+        "over": {
+         "close": {
+          "line": "o221.5",
+          "odds": "-110"
+         }
+        },
+        "under": {
+         "close": {
+          "line": "u221.5",
+          "odds": "-110"
+         }
+        }
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "9002",
+   "date": "2026-11-16T01:00Z",
+   "name": "Ridge Bears at Iron Coast Smiths",
+   "shortName": "RID @ IRO",
+   "competitions": [
+    {
+     "status": {
+      "type": {
+       "name": "STATUS_FINAL",
+       "state": "post",
+       "completed": true
+      }
+     },
+     "competitors": [
+      {
+       "homeAway": "home",
+       "score": "108",
+       "team": {
+        "displayName": "Iron Coast Smiths",
+        "abbreviation": "IRO"
+       }
+      },
+      {
+       "homeAway": "away",
+       "score": "101",
+       "team": {
+        "displayName": "Ridge Bears",
+        "abbreviation": "RID"
+       }
+      }
+     ],
+     "odds": [
+      {
+       "provider": {
+        "name": "Demo Book"
+       },
+       "details": "RID -1.5",
+       "overUnder": 214.0,
+       "homeTeamOdds": {
+        "favorite": false,
+        "moneyLine": 105
+       },
+       "awayTeamOdds": {
+        "favorite": true,
+        "moneyLine": -125
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "9003",
+   "date": "2026-11-16T02:00Z",
+   "name": "X at Y",
+   "competitions": [
+    {
+     "status": {
+      "type": {
+       "name": "STATUS_POSTPONED",
+       "state": "pre",
+       "completed": false
+      }
+     },
+     "competitors": [
+      {
+       "homeAway": "home",
+       "team": {
+        "displayName": "Prairie Foxes",
+        "abbreviation": "PRA"
+       }
+      },
+      {
+       "homeAway": "away",
+       "team": {
+        "displayName": "Glacier Kings",
+        "abbreviation": "GLA"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "9004",
+   "date": "bad",
+   "competitions": []
+  }
+ ]
+}

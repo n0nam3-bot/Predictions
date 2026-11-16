@@ -1,0 +1,8 @@
+{
+  "name": "picks-board",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pre-game picks board: Vercel serves the site and a read-only API; GitHub Actions does the work.",
+  "engines": { "node": ">=20" },
+  "scripts": { "test": "node --test tests/api/*.test.mjs" }
+}
