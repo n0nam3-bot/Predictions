@@ -40,6 +40,7 @@ Everything below works in your phone’s browser. After this, every change is a 
 
 ## If something breaks
 
+- **Vercel says the build was canceled by the Ignored Build Step:** you have an older `vercel.json`. Upload `picks-board-v0.1.1-vercel-fix.zip`, then in Vercel open Deployments and Redeploy. From v0.1.1 the first deploy always builds, and later ones are skipped only when nothing under `site/` or `api/` changed since the last good deploy.
 - **Site shows old code after a zip:** Vercel Hobby blocks deploys whose commit author is not you. Inbox commits are authored as you, so check that the Vercel account uses the same GitHub login. The Inbox log issue says when a deploy was not confirmed.
 - **Nothing publishes:** Actions tab, look at the latest **Pipeline** run summary. See `docs/RUNBOOK.md`.
 - **Roll back a bad upload:** Actions, Inbox, Run workflow, paste the commit SHA into `revert_sha`.

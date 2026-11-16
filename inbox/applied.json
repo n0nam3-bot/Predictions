@@ -4,5 +4,11 @@
   "name": "picks-board-v0.1.zip",
   "applied_utc": "2026-11-16T04:29:37Z",
   "changes": 64
+ },
+ {
+  "sha256": "6fe6b09b29026daea47e9c913cff299687e374c4308e222b7c4041bc0c854404",
+  "name": "picks-board-v0.1.1-vercel-fix.zip",
+  "applied_utc": "2026-11-16T05:45:22Z",
+  "changes": 3
  }
 ]
