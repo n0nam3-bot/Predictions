@@ -114,6 +114,27 @@ test('only GET and HEAD are allowed', async () => {
   assert.equal(r.code, 405);
 });
 
+test('pasted values with quotes, spaces and newlines still work', async () => {
+  process.env.TURSO_URL = ' "libsql://demo-org.turso.io"\n';
+  process.env.TURSO_READ_TOKEN = "'read-only-token'\n";
+  const calls = mockTurso([[{ json: '{}', updated_utc: 't' }]]);
+  const r = res();
+  await latest({ method: 'GET' }, r);
+  assert.equal(r.code, 200);
+  assert.equal(calls[0].url, 'https://demo-org.turso.io/v2/pipeline');
+  assert.equal(calls[0].auth, 'Bearer read-only-token');
+});
+
+test('health explains a database error without leaking secrets', async () => {
+  delete process.env.TURSO_READ_TOKEN;
+  mockTurso([[]]);
+  const r = res();
+  await health({ method: 'GET' }, r);
+  const out = JSON.parse(r.body);
+  assert.equal(out.db, 'error');
+  assert.equal(out.error, 'TURSO_READ_TOKEN is not set');
+});
+
 test('value encoding round-trips', () => {
   assert.deepEqual(db.enc(5), { type: 'integer', value: '5' });
   assert.deepEqual(db.enc(1.5), { type: 'float', value: 1.5 });

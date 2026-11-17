@@ -122,11 +122,15 @@ class TursoStore:
         self._post(list(stmts))
 
 
+def _clean(v):
+    return (v or "").strip().strip("\"'").strip()
+
+
 def connect(env=None, write=True):
     """TURSO_URL + token -> Turso. PICKS_DB=path -> SQLite. Otherwise None (not configured)."""
     env = os.environ if env is None else env
-    url = env.get("TURSO_URL")
-    token = env.get("TURSO_WRITE_TOKEN" if write else "TURSO_READ_TOKEN") or env.get("TURSO_WRITE_TOKEN")
+    url = _clean(env.get("TURSO_URL"))
+    token = _clean(env.get("TURSO_WRITE_TOKEN" if write else "TURSO_READ_TOKEN")) or _clean(env.get("TURSO_WRITE_TOKEN"))
     if url and token:
         return TursoStore(url, token)
     if env.get("PICKS_DB"):

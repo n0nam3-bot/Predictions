@@ -112,3 +112,8 @@ def test_connect_picks_backend():
     assert s.kind == "turso" and s.endpoint == "https://x-y.turso.io/v2/pipeline"
     ro = store.connect({"TURSO_URL": "https://x.turso.io", "TURSO_READ_TOKEN": "r", "TURSO_WRITE_TOKEN": "w"}, write=False)
     assert ro.headers["Authorization"] == "Bearer r"
+
+
+def test_connect_strips_quotes_and_whitespace():
+    s = store.connect({"TURSO_URL": ' "libsql://x-y.turso.io"\n', "TURSO_WRITE_TOKEN": " 'tok' \n"})
+    assert s.endpoint == "https://x-y.turso.io/v2/pipeline" and s.headers["Authorization"] == "Bearer tok"

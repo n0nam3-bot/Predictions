@@ -4,7 +4,7 @@
   const params = new URLSearchParams(location.search);
   const localHost = ['localhost', '127.0.0.1', ''].includes(location.hostname);
   const state = { tz: 'America/New_York', date: null, filter: 'all', latest: null, days: {}, loading: true, error: '', open: new Set(),
-    offset: 0, statusOpen: false, health: null, demo: false, animate: true, banner: '' };
+    offset: 0, statusOpen: false, health: null, demo: false, animate: true, banner: '', loadError: '' };
 
   const $ = (s) => document.querySelector(s);
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -31,8 +31,19 @@
   /* ---------- data ---------- */
   async function fetchJson(url) {
     const r = await fetch(url, { cache: 'no-store' });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
+    if (!r.ok) {
+      let why = '';
+      try { const b = await r.json(); why = b.detail || b.error || ''; } catch (e) { /* not JSON */ }
+      throw new Error(why || 'HTTP ' + r.status);
+    }
     return r.json();
+  }
+  function hint(msg) {
+    if (/is not set/i.test(msg)) return 'A variable is missing in Vercel. Open the project, Settings, Environment Variables, add it for all environments, then Redeploy.';
+    if (/401|403|unauthori[sz]ed|forbidden/i.test(msg)) return 'Turso rejected the token. Create a new read-only token, update TURSO_READ_TOKEN in Vercel, then Redeploy.';
+    if (/no such table/i.test(msg)) return 'The database exists but is empty. In GitHub, run the Pipeline workflow with task schedule.';
+    if (/404|fetch failed|ENOTFOUND|abort/i.test(msg)) return 'Vercel could not reach the database. Check that TURSO_URL looks like libsql://name-org.turso.io.';
+    return 'Open /api/health on this site for details.';
   }
   function setLatest(d) {
     state.latest = d;
@@ -46,10 +57,11 @@
       setLatest(await fetchJson('/api/latest'));
       state.banner = '';
     } catch (e) {
-      if (!state.latest && (params.has('demo') || localHost)) {
+      state.loadError = e.message;
+      if (!state.latest && (params.has('demo') || (localHost && !params.has('live')))) {
         try { setLatest(await fetchJson('demo/latest.json')); state.banner = ''; } catch (e2) { state.error = 'Could not load picks.'; }
       } else if (state.latest) state.banner = 'Offline or delayed. Showing the last data received.';
-      else state.error = 'Could not load picks.';
+      else state.error = 'Could not load picks: ' + e.message + '. ' + hint(e.message);
     }
   }
   async function loadDay(date, force) {
@@ -182,7 +194,8 @@
     const rows = [['Data', esc(d.source || 'none')], ['Last update', esc(ago(d.generated_utc))], ['Last tick', esc(ago(h.last_tick_utc))], ['Last pick posted', esc(ago(h.last_publish_utc))],
       ['Feeds', src.length ? (bad.length ? '<span class="bad">' + bad.length + ' failing</span>, ' + esc(bad.map(([k, v]) => k + ': ' + v.detail).join('; ')) : '<span class="ok">All ' + src.length + ' working</span>') : 'None yet'],
       ['Ledger', h.ledger && h.ledger.ok === true ? '<span class="ok">Clean</span>' : h.ledger && h.ledger.ok === false ? '<span class="bad">' + esc((h.ledger.problems || []).join('; ')) + '</span>' : 'Not checked yet'],
-      ['Deployed commit', api ? esc((api.commit || 'unknown').slice(0, 7)) + (api.ok ? '' : ' (database error)') : 'Checking'],
+      ['Deployed commit', api ? esc((api.commit || 'unknown').slice(0, 7)) : 'Checking'],
+      ['Database', api ? (api.db === 'ok' ? '<span class="ok">Connected</span>' : '<span class="bad">' + esc(api.error || 'error') + '</span>, ' + esc(hint(api.error || ''))) : state.loadError ? '<span class="bad">' + esc(state.loadError) + '</span>' : 'Checking'],
       ['Model', h.experimental ? 'Experimental baseline, not backtested' : 'n/a']];
     el.innerHTML = '<h2>Status</h2><dl>' + rows.map((r) => '<dt>' + r[0] + '</dt><dd>' + r[1] + '</dd>').join('') + '</dl>';
   }

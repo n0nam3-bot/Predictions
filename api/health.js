@@ -5,7 +5,7 @@ const { allow } = require('./_lib/http');
 module.exports = async (req, res) => {
   if (!allow(req, res)) return;
   res.setHeader('Cache-Control', 'no-store');
-  const out = { ok: true, commit: process.env.VERCEL_GIT_COMMIT_SHA || null, db: 'ok', snapshot_age_s: null, health: null };
+  const out = { ok: true, commit: process.env.VERCEL_GIT_COMMIT_SHA || null, db: 'ok', error: null, snapshot_age_s: null, health: null };
   try {
     const row = await snapshot('health');
     if (row) {
@@ -15,6 +15,7 @@ module.exports = async (req, res) => {
   } catch (err) {
     out.ok = false;
     out.db = 'error';
+    out.error = String((err && err.message) || err).slice(0, 160);   // never contains a secret: only 'is not set', HTTP codes, SQL errors
   }
   res.status(200).send(JSON.stringify(out));
 };

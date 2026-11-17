@@ -1,8 +1,11 @@
 // Read-only access to Turso over HTTPS (the /v2/pipeline endpoint). No dependencies.
 // Only TURSO_READ_TOKEN is used here, never the write token, so a leak of this project can't change data.
 
+// Pasted values often carry a trailing newline or quotes; strip them.
+const clean = (v) => String(v || '').trim().replace(/^["']+|["']+$/g, '');
+
 function endpoint() {
-  const url = (process.env.TURSO_URL || '').replace(/^libsql:\/\//, 'https://').replace(/\/+$/, '');
+  const url = clean(process.env.TURSO_URL).replace(/^libsql:\/\//, 'https://').replace(/\/+$/, '');
   if (!url) throw new Error('TURSO_URL is not set');
   return url + '/v2/pipeline';
 }
@@ -23,7 +26,7 @@ function dec(cell) {
 }
 
 async function query(sql, args = []) {
-  const token = process.env.TURSO_READ_TOKEN;
+  const token = clean(process.env.TURSO_READ_TOKEN);
   if (!token) throw new Error('TURSO_READ_TOKEN is not set');
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), 8000);
@@ -51,4 +54,4 @@ async function snapshot(key) {
   return rows[0] || null;
 }
 
-module.exports = { query, snapshot, enc, dec, endpoint };
+module.exports = { query, snapshot, enc, dec, endpoint, clean };

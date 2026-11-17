@@ -1,0 +1,110 @@
+# The clock for the whole project. GitHub cron is best-effort (runs can be late or dropped), so every
+# task works from absolute timestamps stored in the database and catches up on the next run.
+name: Pipeline
+
+on:
+  schedule:
+    - cron: '2-59/5 * * * *'     # tick: publish picks that are due (off the top of the hour on purpose)
+    - cron: '7 */3 * * *'        # schedule: games, bouts, injuries
+    - cron: '17,47 * * * *'      # grade: results into the record
+    - cron: '35 8 * * *'         # ledger: daily audit export (about 3-4 am New York)
+  workflow_dispatch:
+    inputs:
+      task:
+        description: 'What to run'
+        type: choice
+        default: tick
+        options: [tick, schedule, grade, ledger, verify, backfill, audit, setup-check, demo]
+      days:
+        description: 'For backfill: how many past days to load'
+        required: false
+        default: '45'
+      simulate_now:
+        description: 'Pretend it is this UTC time, for example 2026-11-15T23:55:00Z (empty = real time)'
+        required: false
+        default: ''
+
+concurrency:
+  group: pipeline-${{ github.event.schedule || github.event.inputs.task || 'manual' }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SCHEDULE: ${{ github.event.schedule }}
+      INPUT_TASK: ${{ github.event.inputs.task }}
+      NOW: ${{ github.event.inputs.simulate_now }}
+      DAYS: ${{ github.event.inputs.days }}
+      TURSO_URL: ${{ secrets.TURSO_URL }}
+      TURSO_WRITE_TOKEN: ${{ secrets.TURSO_WRITE_TOKEN }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+      CLOUDFLARE_AI: ${{ secrets.CLOUDFLARE_AI }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+      INBOX_PAT_SET: ${{ secrets.INBOX_PAT != '' }}
+      SITE_URL: ${{ vars.SITE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pick the task
+        id: t
+        run: |
+          case "$SCHEDULE" in
+            '2-59/5 * * * *') task=tick ;;
+            '7 */3 * * *') task=schedule ;;
+            '17,47 * * * *') task=grade ;;
+            '35 8 * * *') task=ledger ;;
+            *) task="${INPUT_TASK:-tick}" ;;
+          esac
+          echo "task=$task" >> "$GITHUB_OUTPUT"
+          echo "Task: $task"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install
+        run: pip install -q -r requirements.txt
+
+      - name: Run
+        env:
+          TASK: ${{ steps.t.outputs.task }}
+        run: |
+          export PYTHONPATH=src
+          case "$TASK" in
+            audit) python scripts/source_audit.py ;;
+            setup-check) python scripts/setup_check.py ;;
+            backfill) python -m picks.cli backfill --days "${DAYS:-45}" ${NOW:+--now "$NOW"} ;;
+            demo) python -m picks.cli demo --out "$RUNNER_TEMP/demo.json" ;;
+            *) python -m picks.cli "$TASK" ${NOW:+--now "$NOW"} ;;
+          esac
+
+      - name: Keep the audit samples
+        if: steps.t.outputs.task == 'audit'
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-samples
+          path: audit_out/
+          if-no-files-found: ignore
+
+      - name: Commit the daily ledger
+        if: steps.t.outputs.task == 'ledger'
+        env:
+          AUTHOR_NAME: ${{ github.repository_owner }}
+          AUTHOR_EMAIL: ${{ github.repository_owner_id }}+${{ github.repository_owner }}@users.noreply.github.com
+        run: |
+          git add data/ledger
+          if git diff --cached --quiet; then echo "No ledger changes."; exit 0; fi
+          git -c user.name="$AUTHOR_NAME" -c user.email="$AUTHOR_EMAIL" commit -q -m "ledger: daily export"
+          for i in 1 2 3; do
+            git push origin HEAD:"${GITHUB_REF_NAME}" && exit 0
+            git pull --rebase -q origin "${GITHUB_REF_NAME}"
+          done
+          exit 1
