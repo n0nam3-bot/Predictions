@@ -64,8 +64,11 @@ def test_audit_flags_events_that_do_not_parse(tmp_path):
 
 
 def test_setup_check_missing_then_complete():
-    rows, ok = setup_check.check({})
+    rows, ok = setup_check.check({"GITHUB_REPOSITORY": "n0nam3-bot/Predictions"})
     assert not ok and [r[1] for r in rows[:2]] == ["MISSING", "MISSING"]
+    assert "https://github.com/n0nam3-bot/Predictions/settings/secrets/actions/new" in rows[0][2]
+    text0 = setup_check.render(rows, ok, {"GITHUB_REPOSITORY": "n0nam3-bot/Predictions"})
+    assert "aistudio.google.com/apikey" in text0 and "the-odds-api.com" in text0
     fake = FakeTurso()
     try:
         env = {"TURSO_URL": fake.url, "TURSO_WRITE_TOKEN": WRITE, "GEMINI_API_KEY": "k", "INBOX_PAT_SET": "true",

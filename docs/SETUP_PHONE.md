@@ -1,5 +1,27 @@
 # Setup from a phone (about 25 minutes, once)
 
+## Keys cheat sheet: what, where to get it, where to paste it
+
+Every secret below goes in **one place**: your repo’s Actions secrets page.
+**Add a secret:** https://github.com/n0nam3-bot/Predictions/settings/secrets/actions/new  (all secrets: https://github.com/n0nam3-bot/Predictions/settings/secrets/actions)
+**Add a variable (SITE_URL):** https://github.com/n0nam3-bot/Predictions/settings/variables/actions
+(If you rename the repo, swap the name in those links.) Name must match exactly; paste only the value, no quotes.
+
+| Secret name | Needed? | Get it here | Notes |
+|---|---|---|---|
+| `TURSO_URL` | Yes | https://turso.tech (dashboard, your database) | Starts with `libsql://` |
+| `TURSO_WRITE_TOKEN` | Yes | Turso dashboard, your database, create a **full-access** token | Also add the read-only one to Vercel (below) |
+| `INBOX_PAT` | Recommended | https://github.com/settings/personal-access-tokens/new | Fine-grained token, this repo only, Contents + Workflows read/write |
+| `GEMINI_API_KEY` | Optional | https://aistudio.google.com/apikey | Free tier. Nicer analysis text |
+| `MISTRAL_API_KEY` | Optional | https://console.mistral.ai/api-keys | Second choice if Gemini is busy |
+| `OPENROUTER_API_KEY` | Optional | https://openrouter.ai/keys | Third choice, free models only |
+| `CLOUDFLARE_AI` | Optional | https://dash.cloudflare.com/profile/api-tokens | Value is `ACCOUNT_ID:API_TOKEN`. Token needs the Workers AI permission |
+| `ODDS_API_KEY` | Only if ESPN has no odds | https://the-odds-api.com/ | Free, 500 credits a month. See step 13 |
+
+The optional keys go in **GitHub only**, not Vercel. Vercel needs just two variables, set at https://vercel.com/dashboard (open the project, Settings, Environment Variables): `TURSO_URL` and `TURSO_READ_TOKEN` (the read-only token).
+
+After adding anything: Actions tab, **Pipeline**, Run workflow, task **setup-check**. Its summary shows what is still missing and links straight to the right page. Provider sites move their pages sometimes; if a link is dead, search the provider name plus “API keys”.
+
 Everything below works in your phone’s browser. After this, every change is a zip upload.
 
 ## A. GitHub
@@ -20,7 +42,7 @@ Everything below works in your phone’s browser. After this, every change is a 
 
 6. turso.tech, sign in with GitHub, **Create database** (any name, region near you). Copy its URL (starts with `libsql://`).
    Create **two tokens** for that database: one **full access** (for GitHub) and one **read-only** (for Vercel). If the dashboard only offers full access, use it for both and be aware that a leak of the Vercel project would then expose write access.
-7. Repo, Settings, Secrets and variables, Actions, add secrets:
+7. Add these as Actions secrets (links in the cheat sheet above):
    - `TURSO_URL` = the `libsql://...` URL
    - `TURSO_WRITE_TOKEN` = the full-access token
    - Optional free LLM keys (analysis text falls back to a built-in template without them): `GEMINI_API_KEY`, `MISTRAL_API_KEY`, `OPENROUTER_API_KEY`, `CLOUDFLARE_AI` (format `ACCOUNT_ID:API_TOKEN`). Groq is deliberately not supported.
