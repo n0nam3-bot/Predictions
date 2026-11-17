@@ -4,7 +4,7 @@
 
 | Source | Used for | Notes |
 |---|---|---|
-| ESPN public JSON (`site.api.espn.com`) | Schedules, scores, odds, injuries, UFC events | Unofficial and may change or block. Used in v0. DWCS slug is unknown; the audit tries `dwcs`, `dana-white-contender-series`, `contender-series`. |
+| ESPN public JSON (`site.api.espn.com`) | Schedules, scores, odds, injuries, UFC events | Unofficial and may change or block. Used in v0. ESPN has no valid `dwcs` league address (it returns HTTP 400), so Contender Series bouts are picked out of the UFC feed by event name. If ESPN does not list them there, DWCS stays empty; the audit shows how many it found. |
 | MLB Stats API | Probable pitchers, lineups (next step) | Probed by the audit, not used yet. |
 | NHL web API | Goalies, schedule (next step) | Probed, not used yet. |
 | NBA cdn.nba.com | Live JSON (next step) | `stats.nba.com` often blocks cloud IPs; do not depend on it. |

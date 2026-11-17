@@ -69,6 +69,10 @@ Everything below works in your phone’s browser. After this, every change is a 
 16. **Text.** An LLM key is optional. Without one, analysis text comes from the built-in template.
 17. **Then wait one slate.** Open the site, pick a past date with the date control, and check games against the real result. Do not trust a PLAY until the record has a few hundred graded plays.
 
+## F. Make the clock reliable (do this)
+
+GitHub's own schedule often skips runs on a new repo, and nothing gets posted when a tick misses its window. Follow `docs/RELIABLE_CLOCK.md` (free, about 5 minutes) to have cron-job.org start the tick every 5 minutes.
+
 ## If something breaks
 
 - **Vercel says the build was canceled by the Ignored Build Step:** you have an older `vercel.json`. Upload `picks-board-v0.1.1-vercel-fix.zip`, then in Vercel open Deployments and Redeploy. From v0.1.1 the first deploy always builds, and later ones are skipped only when nothing under `site/` or `api/` changed since the last good deploy.

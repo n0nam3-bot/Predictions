@@ -33,7 +33,7 @@ sports:
   nhl:  {kind: team, espn: [hockey, nhl]}
   mlb:  {kind: team, espn: [baseball, mlb]}
   ufc:  {kind: bout, espn: [mma, ufc]}
-  dwcs: {kind: bout, espn: [mma, dwcs]}   # slug unverified: run the source audit
+  dwcs: {kind: bout, via: ufc}            # no feed of its own: Contender Series events are picked out of the UFC feed by name
 
 llm:                          # free tiers only, tried in this order. Groq is not used.
   gemini:     {model: gemini-2.5-flash, daily_cap: 200}

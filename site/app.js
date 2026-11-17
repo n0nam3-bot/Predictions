@@ -200,11 +200,19 @@
     el.innerHTML = '<h2>Status</h2><dl>' + rows.map((r) => '<dt>' + r[0] + '</dt><dd>' + r[1] + '</dd>').join('') + '</dl>';
   }
 
+  function staleNote() {
+    const d = state.latest;
+    if (!d || d.source !== 'live' || !d.health || !d.health.last_tick_utc) return '';
+    const gap = (now() - Date.parse(d.health.last_tick_utc)) / 60000;
+    if (gap <= 30) return '';
+    return 'New picks are delayed: the updater last ran ' + (gap >= 120 ? Math.round(gap / 60) + ' hours' : Math.round(gap) + ' minutes') + ' ago.';
+  }
+
   function render() {
     const all = dayGames();
     const games = (all || []).filter((g) => state.filter === 'all' || g.sport === state.filter);
     renderNav(); renderSummary(all, games); renderTabs(all); renderList(all);
-    const b = $('#banner'); const msg = [state.banner, state.latest && state.latest.demo_note].filter(Boolean).join(' '); b.hidden = !msg; b.textContent = msg;
+    const b = $('#banner'); const msg = [state.banner, state.latest && state.latest.demo_note, staleNote()].filter(Boolean).join(' '); b.hidden = !msg; b.textContent = msg;
     renderStatus(); state.animate = false;
   }
 

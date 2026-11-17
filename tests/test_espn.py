@@ -63,3 +63,14 @@ def test_source_builds_urls_and_retries(monkeypatch):
     assert len(games) == 3 and http.urls[0].endswith("/basketball/nba/scoreboard?dates=20261115&limit=300")
     assert espn.ESPNSource(CFG, FakeHTTP([(200, load("espn_injuries.json"))])).fetch_injuries("nba")["Lakeview Herons"] == []
     assert espn.ESPNSource(CFG, FakeHTTP([])).fetch_injuries("ufc") == {}
+
+
+def test_contender_series_is_labelled_from_the_ufc_feed_and_has_no_own_endpoint():
+    raw = load("espn_ufc_scoreboard.json")
+    raw["events"][0]["name"] = "Dana White's Contender Series: Season 10, Week 3"
+    bouts = espn.parse_scoreboard(raw, "ufc", "bout")
+    assert {b["sport"] for b in bouts} == {"dwcs"} and bouts[0]["id"].startswith("espn:dwcs:")
+    assert CFG["sports"]["dwcs"] == {"kind": "bout", "via": "ufc"}
+    http = FakeHTTP([(200, raw)])
+    games = espn.ESPNSource(CFG, http).fetch_day("dwcs", "2026-11-19")
+    assert http.urls[0].endswith("/mma/ufc/scoreboard?dates=20261119&limit=300") and games[0]["sport"] == "dwcs"

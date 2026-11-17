@@ -52,7 +52,8 @@ def espn_scoreboard_check(sport_key, kind):
         with_ml = sum(1 for g in games if g["odds"] and g["odds"]["home_ml"] is not None)
         if events and not games:
             raise ValueError(f"{events} events but none parsed")
-        return f"{events} events, {len(games)} parsed, {with_odds} with odds, {with_ml} with moneyline"
+        extra = f", {sum(1 for g in games if g['sport'] == 'dwcs')} Contender Series bouts" if kind == "bout" else ""
+        return f"{events} events, {len(games)} parsed, {with_odds} with odds, {with_ml} with moneyline{extra}"
     return check
 
 
@@ -65,6 +66,8 @@ def targets(cfg, today):
     ymd, iso_day = today.strftime("%Y%m%d"), today.isoformat()
     out = []
     for key, spec in cfg["sports"].items():
+        if "via" in spec:
+            continue
         sp, lg = spec["espn"]
         base = espn.BASE.format(sport=sp, league=lg)
         out.append((f"ESPN scoreboard {key}", f"{base}/scoreboard?dates={ymd}&limit=300", espn_scoreboard_check(key, spec["kind"])))

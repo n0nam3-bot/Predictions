@@ -36,6 +36,22 @@ def run_ledger(st, cfg, now):
     return {"written": written, "problems": problems}
 
 
+def last_run(st, kind):
+    row = st.q("SELECT MAX(at_utc) AS m FROM heartbeat WHERE kind = ?", (kind,))
+    return parse_utc(row[0]["m"]) if row and row[0]["m"] else None
+
+
+def housekeeping(st, source, cfg, now):
+    """GitHub cron is unreliable. If only `tick` is being triggered (for example by an external timer),
+    refresh the schedule every 3 hours and grade every 40 minutes from inside the tick."""
+    ran = []
+    ls, lg = last_run(st, "schedule"), last_run(st, "grade")
+    if ls is None or (now - ls) > timedelta(hours=3):
+        pipeline.run_schedule(st, source, cfg, now)
+        ran.append("schedule")
+    return ran, (lg is None or (now - lg) > timedelta(minutes=40))
+
+
 def main(argv=None, source=None, env=None):
     ap = argparse.ArgumentParser(prog="picks", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("cmd", choices=["migrate", "schedule", "tick", "grade", "ledger", "verify", "backfill", "demo"])
@@ -62,6 +78,7 @@ def main(argv=None, source=None, env=None):
     if args.cmd == "schedule":
         out = pipeline.run_schedule(st, source, cfg, now)
     elif args.cmd == "tick":
+        ran, grade_due = housekeeping(st, source, cfg, now)
         chain = llm.Chain(st, cfg, now, env)
         env_ = os.environ if env is None else env
         odds = None
@@ -69,6 +86,10 @@ def main(argv=None, source=None, env=None):
             from .sources.oddsapi import OddsAPISource
             odds = OddsAPISource(env_["ODDS_API_KEY"], st, now)
         out = pipeline.run_tick(st, source, cfg, now, chain if chain.available() else None, odds)
+        if grade_due:
+            pipeline.run_grade(st, source, cfg, now)
+            ran.append("grade")
+        out["also_ran"] = ran
     elif args.cmd == "backfill":
         out = pipeline.run_backfill(st, source, cfg, now, args.days)
     elif args.cmd == "grade":

@@ -39,6 +39,14 @@ def check(env, http_get=requests.get):
             games = st.q("SELECT COUNT(*) AS n FROM games")[0]["n"]
             picks = st.q("SELECT COUNT(*) AS n FROM picks")[0]["n"]
             add("Database reachable, schema applied", "ok", f"{games} games, {picks} picks stored")
+            last = st.q("SELECT MAX(at_utc) AS m FROM heartbeat WHERE kind = 'tick'")[0]["m"]
+            if not last:
+                add("Scheduler (tick)", "MISSING", "No tick has ever run. Run Pipeline with task tick, then set up the external timer: docs/RELIABLE_CLOCK.md.")
+            else:
+                from datetime import datetime, timezone
+                age = (datetime.now(timezone.utc) - datetime.fromisoformat(last.replace("Z", "+00:00"))).total_seconds() / 60
+                add("Scheduler (tick)", "ok" if age <= 15 else "MISSING",
+                    f"Last tick {int(age)} min ago." + ("" if age <= 15 else " GitHub's own cron is not firing reliably. Set up the external timer: docs/RELIABLE_CLOCK.md."))
         except Exception as exc:
             add("Database reachable, schema applied", "MISSING", f"{exc}. Check the URL and that the token is full access.")
     have = [k for k in LLM_KEYS if env.get(k)]

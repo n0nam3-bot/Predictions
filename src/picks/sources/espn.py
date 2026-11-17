@@ -105,6 +105,9 @@ def parse_team_event(ev, sport_key):
 
 
 def parse_bouts(ev, sport_key):
+    """Contender Series cards come through the UFC feed; label them by event name."""
+    if sport_key == "ufc" and "contender series" in (ev.get("name") or "").lower():
+        sport_key = "dwcs"
     out = []
     for comp in ev.get("competitions", []):
         fighters = comp.get("competitors", [])
@@ -165,13 +168,15 @@ class ESPNSource:
         raise RuntimeError(f"ESPN request failed: {last} ({url})")
 
     def _base(self, sport_key):
+        sport_key = self.cfg["sports"][sport_key].get("via", sport_key)
         sp, lg = self.cfg["sports"][sport_key]["espn"]
         return BASE.format(sport=sp, league=lg)
 
     def fetch_day(self, sport_key, day):
         d = day if isinstance(day, date) else date.fromisoformat(str(day))
-        raw = self._get_json(f"{self._base(sport_key)}/scoreboard?dates={d:%Y%m%d}&limit=300")
-        return parse_scoreboard(raw, sport_key, self.cfg["sports"][sport_key]["kind"])
+        feed = self.cfg["sports"][sport_key].get("via", sport_key)
+        raw = self._get_json(f"{self._base(feed)}/scoreboard?dates={d:%Y%m%d}&limit=300")
+        return parse_scoreboard(raw, feed, self.cfg["sports"][feed]["kind"])
 
     def fetch_injuries(self, sport_key):
         if self.cfg["sports"][sport_key]["kind"] != "team":

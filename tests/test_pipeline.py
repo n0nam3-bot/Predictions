@@ -177,3 +177,12 @@ def test_odds_snapshots_only_when_changed_and_pregame(s):
     assert len(s.q("SELECT * FROM odds_snapshots")) == 2
     pipeline.upsert_game(s, dict(g, odds={**g["odds"], "home_ml": -150}), start + timedelta(minutes=10))
     assert len(s.q("SELECT * FROM odds_snapshots")) == 2
+
+
+def test_schedule_never_requests_the_feedless_dwcs_and_grading_maps_it_to_ufc(s):
+    src = Src([])
+    pipeline.run_schedule(s, src, CFG, T0)
+    assert "dwcs" not in {f[0] for f in src.fetches} and "ufc" in {f[0] for f in src.fetches}
+    src.fetches.clear()
+    pipeline.refresh_days(s, src, CFG, T0, {("dwcs", T0.date())})
+    assert [f[0] for f in src.fetches] == ["ufc"]

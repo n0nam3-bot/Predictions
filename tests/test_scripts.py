@@ -73,10 +73,23 @@ def test_setup_check_missing_then_complete():
     try:
         env = {"TURSO_URL": fake.url, "TURSO_WRITE_TOKEN": WRITE, "GEMINI_API_KEY": "k", "INBOX_PAT_SET": "true",
                "SITE_URL": "https://picks.example.vercel.app"}
+        from datetime import datetime, timedelta, timezone
+        from picks import store as _store
+        w = _store.TursoStore(fake.url, WRITE)
+        _store.migrate(w)
+        stamp = lambda m: (datetime.now(timezone.utc) - timedelta(minutes=m)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        rows, ok = setup_check.check(env, lambda url, timeout: Resp(200, {"ok": True, "commit": "abcdef123", "db": "ok"}))
+        assert not ok and {r[0]: r for r in rows}["Scheduler (tick)"][1] == "MISSING"           # never ticked
+        w.x("INSERT INTO heartbeat (kind, at_utc) VALUES ('tick', ?)", (stamp(3),))
         rows, ok = setup_check.check(env, lambda url, timeout: Resp(200, {"ok": True, "commit": "abcdef123", "db": "ok"}))
         d = {r[0]: r for r in rows}
         assert ok and d["Database reachable, schema applied"][1] == "ok" and "abcdef1" in d["Vercel site reachable"][2]
         assert d["Free LLM key (optional)"][2] == "GEMINI_API_KEY"
+        w.x("INSERT INTO heartbeat (kind, at_utc) VALUES ('tick', ?)", (stamp(300),))
+        w.x("DELETE FROM heartbeat WHERE at_utc > ?", (stamp(100),))
+        rows, ok = setup_check.check(env, lambda url, timeout: Resp(200, {"ok": True, "commit": "abcdef123", "db": "ok"}))
+        sched = {r[0]: r for r in rows}["Scheduler (tick)"]
+        assert not ok and "RELIABLE_CLOCK" in sched[2]                                              # stale tick explained
         rows, ok = setup_check.check({**env, "TURSO_WRITE_TOKEN": "wrong"})
         assert not ok
         text = setup_check.render(rows, ok)

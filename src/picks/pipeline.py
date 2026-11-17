@@ -66,9 +66,14 @@ def _note_source(store, name, ok, detail, now):
     put_snapshot(store, "sources", cur, now)
 
 
+def feeds(cfg):
+    return [s for s, spec in cfg["sports"].items() if "via" not in spec]
+
+
 def refresh_days(store, source, cfg, now, pairs):
     """pairs: set of (sport, date). Fetch each scoreboard once and upsert."""
     n = 0
+    pairs = {(cfg["sports"][s].get("via", s), d) for s, d in pairs}
     for sport, day in sorted(pairs):
         try:
             for g in source.fetch_day(sport, day):
@@ -96,9 +101,9 @@ def refresh_injuries(store, source, cfg, now, sports):
 def run_schedule(store, source, cfg, now, back=7, fwd=2):
     heartbeat(store, "schedule", now)
     today = et_day(now, cfg)
-    pairs = {(s, today + timedelta(days=d)) for s in cfg["sports"] for d in range(-back, fwd + 1)}
+    pairs = {(s, today + timedelta(days=d)) for s in feeds(cfg) for d in range(-back, fwd + 1)}
     n = refresh_days(store, source, cfg, now, pairs)
-    refresh_injuries(store, source, cfg, now, set(cfg["sports"]))
+    refresh_injuries(store, source, cfg, now, set(feeds(cfg)))
     build_snapshots(store, cfg, now)
     return {"games_upserted": n}
 
@@ -107,7 +112,7 @@ def run_backfill(store, source, cfg, now, days=45):
     """Load past scoreboards so rest, form and the date picker have history."""
     heartbeat(store, "backfill", now)
     today = et_day(now, cfg)
-    pairs = {(s, today - timedelta(days=d)) for s in cfg["sports"] for d in range(1, days + 1)}
+    pairs = {(s, today - timedelta(days=d)) for s in feeds(cfg) for d in range(1, days + 1)}
     n = refresh_days(store, source, cfg, now, pairs)
     build_snapshots(store, cfg, now)
     return {"days": days, "games_upserted": n}

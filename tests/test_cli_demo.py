@@ -36,3 +36,19 @@ def test_demo_is_labelled_and_complete(tmp_path):
     assert any(g["pick"] and g["pick"]["top_pick"] for g in d["games"])
     assert d["records"]["overall"]["w"] > 0 and len(d["records"]["history"]) == 30
     assert not any("Groq" in json.dumps(d) for _ in [0])
+
+
+def test_tick_tops_up_schedule_and_grade_when_only_tick_is_triggered(tmp_path):
+    env = {"PICKS_DB": str(tmp_path / "p.db")}
+    start = T0 + timedelta(hours=2)
+    src = Src([game("g1", start)])
+    now = (start - timedelta(minutes=33)).isoformat()
+    assert cli.main(["tick", "--now", now], source=src, env=env) == 0          # nothing scheduled yet, no manual schedule run
+    st = store.connect(env)
+    assert len(st.q("SELECT * FROM picks")) == 1                                 # tick scheduled the games itself
+    kinds = {r["kind"] for r in st.q("SELECT kind FROM heartbeat")}
+    assert {"schedule", "tick", "grade"} <= kinds
+    before = len(src.fetches)
+    later = (start - timedelta(minutes=28)).isoformat()
+    cli.main(["tick", "--now", later], source=src, env=env)
+    assert len([f for f in src.fetches[before:]]) < 3                            # no full re-schedule within 3 hours
