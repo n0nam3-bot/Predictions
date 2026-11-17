@@ -93,7 +93,7 @@ def refresh_injuries(store, source, cfg, now, sports):
             _note_source(store, f"injuries:{sport}", False, str(exc)[:160], now)
 
 
-def run_schedule(store, source, cfg, now, back=3, fwd=2):
+def run_schedule(store, source, cfg, now, back=7, fwd=2):
     heartbeat(store, "schedule", now)
     today = et_day(now, cfg)
     pairs = {(s, today + timedelta(days=d)) for s in cfg["sports"] for d in range(-back, fwd + 1)}
@@ -101,6 +101,47 @@ def run_schedule(store, source, cfg, now, back=3, fwd=2):
     refresh_injuries(store, source, cfg, now, set(cfg["sports"]))
     build_snapshots(store, cfg, now)
     return {"games_upserted": n}
+
+
+def run_backfill(store, source, cfg, now, days=45):
+    """Load past scoreboards so rest, form and the date picker have history."""
+    heartbeat(store, "backfill", now)
+    today = et_day(now, cfg)
+    pairs = {(s, today - timedelta(days=d)) for s in cfg["sports"] for d in range(1, days + 1)}
+    n = refresh_days(store, source, cfg, now, pairs)
+    build_snapshots(store, cfg, now)
+    return {"days": days, "games_upserted": n}
+
+
+def _row_game(row, odds):
+    keys = ("id", "sport", "kind", "event_id", "event_name", "start_utc", "home", "away", "venue", "status",
+            "home_score", "away_score", "winner", "method", "home_record", "away_record")
+    return {**{k: row[k] for k in keys}, "odds": odds}
+
+
+def fill_missing_odds(store, odds_source, cfg, now, games):
+    """Ask the fallback odds source only for games that still have no moneyline."""
+    from .sources import oddsapi
+    filled = 0
+    need = {}
+    for g in games:
+        o = json.loads(g["odds_json"]) if g.get("odds_json") else None
+        if not o or o.get("home_ml") is None or o.get("away_ml") is None:
+            need.setdefault(g["sport"], []).append(g)
+    for sport, rows in need.items():
+        try:
+            events = odds_source.fetch(sport)
+        except Exception as exc:
+            _note_source(store, f"odds:{sport}", False, str(exc)[:160], now)
+            continue
+        for g in rows:
+            found = oddsapi.match(g, events)
+            if found:
+                upsert_game(store, _row_game(g, found), now)
+                filled += 1
+        if events:
+            _note_source(store, f"odds:{sport}", True, f"{len(events)} events", now)
+    return filled
 
 
 def _candidates(store, now):
@@ -151,7 +192,7 @@ def publish_game(store, cfg, now, g, state, chain=None):
     return saved
 
 
-def run_tick(store, source, cfg, now, chain=None):
+def run_tick(store, source, cfg, now, chain=None, odds_source=None):
     now = parse_utc(now)
     heartbeat(store, "tick", now)
     published = {r["game_id"] for r in store.q("SELECT game_id FROM picks")}
@@ -170,6 +211,9 @@ def run_tick(store, source, cfg, now, chain=None):
         pairs = {(g["sport"], et_day(g["start_utc"], cfg)) for g in pending}
         refresh_days(store, source, cfg, now, pairs)
         refresh_injuries(store, source, cfg, now, {g["sport"] for g in pending})
+        if odds_source is not None:
+            fill_missing_odds(store, odds_source, cfg, now,
+                              [store.q("SELECT * FROM games WHERE id = ?", (g["id"],))[0] for g in pending])
         for g in pending:
             fresh = store.q("SELECT * FROM games WHERE id = ?", (g["id"],))[0]
             if fresh["status"] not in ("scheduled", "delayed"):
@@ -272,7 +316,10 @@ def build_snapshots(store, cfg, now):
               "last_publish_utc": last_pub, "sources": sources, "quota": quota,
               "ledger": get_snapshot(store, "ledger_check", {"ok": None, "checked_utc": None, "problems": []}),
               "experimental": True}
-    latest = {"schema": 1, "source": "live", "generated_utc": iso(now), "timezone": cfg["timezone"],
+    span = store.q("SELECT MIN(start_utc) AS lo, MAX(start_utc) AS hi FROM games")[0]
+    date_range = {"min": str(et_day(span["lo"], cfg)) if span["lo"] else None,
+                  "max": str(et_day(span["hi"], cfg)) if span["hi"] else None}
+    latest = {"schema": 1, "source": "live", "date_range": date_range, "generated_utc": iso(now), "timezone": cfg["timezone"],
               "sports": SPORT_ORDER, "records": rec, "games": out, "health": health,
               "top_picks": [x["id"] for x in out if x["pick"] and x["pick"]["top_pick"]]}
     put_snapshot(store, "latest", latest, now)

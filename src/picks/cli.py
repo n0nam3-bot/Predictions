@@ -1,6 +1,6 @@
 """python -m picks.cli <command>   (set PYTHONPATH=src)
 
-migrate | schedule | tick | grade | ledger | verify | demo
+migrate | schedule | tick | grade | ledger | verify | backfill | demo
 --now ISO   simulate the clock (used by the 'simulate_now' workflow input)
 """
 import argparse
@@ -38,8 +38,9 @@ def run_ledger(st, cfg, now):
 
 def main(argv=None, source=None, env=None):
     ap = argparse.ArgumentParser(prog="picks", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("cmd", choices=["migrate", "schedule", "tick", "grade", "ledger", "verify", "demo"])
+    ap.add_argument("cmd", choices=["migrate", "schedule", "tick", "grade", "ledger", "verify", "backfill", "demo"])
     ap.add_argument("--now", default="")
+    ap.add_argument("--days", type=int, default=45)
     ap.add_argument("--out", default=str(ROOT / "site" / "demo" / "latest.json"))
     args = ap.parse_args(argv)
     cfg = config.load()
@@ -62,7 +63,14 @@ def main(argv=None, source=None, env=None):
         out = pipeline.run_schedule(st, source, cfg, now)
     elif args.cmd == "tick":
         chain = llm.Chain(st, cfg, now, env)
-        out = pipeline.run_tick(st, source, cfg, now, chain if chain.available() else None)
+        env_ = os.environ if env is None else env
+        odds = None
+        if env_.get("ODDS_API_KEY"):
+            from .sources.oddsapi import OddsAPISource
+            odds = OddsAPISource(env_["ODDS_API_KEY"], st, now)
+        out = pipeline.run_tick(st, source, cfg, now, chain if chain.available() else None, odds)
+    elif args.cmd == "backfill":
+        out = pipeline.run_backfill(st, source, cfg, now, args.days)
     elif args.cmd == "grade":
         out = pipeline.run_grade(st, source, cfg, now)
     elif args.cmd == "ledger":

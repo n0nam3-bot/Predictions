@@ -34,9 +34,18 @@ Everything below works in your phone’s browser. After this, every change is a 
 
 ## D. First run
 
-11. Actions, Pipeline, Run workflow: **schedule** (loads games), then **tick**, then **audit**.
+11. Actions, Pipeline, Run workflow: **schedule** (loads games), then **backfill** (loads the past 45 days), then **tick**, then **audit**.
     The audit tests every free data feed from GitHub’s servers and lists what works. Read it before trusting any feed (see `docs/DATA_SOURCES.md`).
 12. Open the site. Until real injury data and a validated model exist, most games will correctly show **PASS**. That is the system refusing to guess.
+
+## E. Making it analyse real games (what you need)
+
+13. **Odds.** Run the `audit` task and open the **ESPN scoreboard** rows. The Notes column ends with “N with moneyline”. If N is above zero for the sports in season, the odds come free from ESPN and you need nothing else.
+    If it is zero, get a free key at the-odds-api.com (no card, 500 credits a month) and add it as the secret `ODDS_API_KEY`. It is used only for games ESPN has no moneyline for, at most once per sport every 20 minutes, and never past 85% of the month.
+14. **History.** Run the `backfill` task (default 45 days). Rest, recent form and the date picker all read stored games; without this they only know the last week.
+15. **Injuries.** The audit’s **ESPN injuries** rows must say rows greater than zero. If they fail, injuries stay unavailable and every game is a PASS (coverage cannot reach 80%).
+16. **Text.** An LLM key is optional. Without one, analysis text comes from the built-in template.
+17. **Then wait one slate.** Open the site, pick a past date with the date control, and check games against the real result. Do not trust a PLAY until the record has a few hundred graded plays.
 
 ## If something breaks
 

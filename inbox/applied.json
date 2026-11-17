@@ -10,5 +10,11 @@
   "name": "picks-board-v0.1.1-vercel-fix.zip",
   "applied_utc": "2026-11-16T05:45:22Z",
   "changes": 3
+ },
+ {
+  "sha256": "bcb1215490f078844c2040487995d46243ecaceda6cba8ce5745c50f8e86f316",
+  "name": "picks-board-v0.2.0.zip",
+  "applied_utc": "2026-11-17T01:43:57Z",
+  "changes": 15
  }
 ]

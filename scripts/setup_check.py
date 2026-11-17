@@ -36,6 +36,9 @@ def check(env, http_get=requests.get):
     have = [k for k in LLM_KEYS if env.get(k)]
     add("Free LLM key (optional)", "ok" if have else "optional", ", ".join(have) if have else
         "None set, so analysis text comes from the built-in template. Add GEMINI_API_KEY for nicer wording. Groq is not used.")
+    add("ODDS_API_KEY (optional)", "ok" if env.get("ODDS_API_KEY") else "optional",
+        "Fallback odds, used only when ESPN has no moneyline for a game." if env.get("ODDS_API_KEY") else
+        "Only needed if the audit shows ESPN returns no moneylines. Free key at the-odds-api.com (500 credits a month).")
     add("INBOX_PAT (optional)", "ok" if env.get("INBOX_PAT_SET") == "true" else "optional",
         "" if env.get("INBOX_PAT_SET") == "true" else "Without it, zips cannot update .github/workflows files; they are saved for a manual paste.")
     site = (env.get("SITE_URL") or "").rstrip("/")

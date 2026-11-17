@@ -11,7 +11,7 @@
 | nflverse open data | NFL EPA, play by play (next step) | Probed, not used yet. |
 | UFCStats | Fighter statistics (next step) | Check its terms before scraping. |
 | NWS API, Open-Meteo | Weather (next step) | Free, no key. |
-| The Odds API | Cross-checking odds | Free plan is 500 credits a month, so it is not called in v0. |
+| The Odds API | Fallback moneylines | Used only when ESPN has none for a game about to be posted. One credit per sport per call, at most once per sport every 20 minutes, stops at 85% of 500 a month. Needs the `ODDS_API_KEY` secret. |
 
 ## Free LLM providers (optional; text only, numbers never come from the model)
 Order tried: Gemini API, Mistral, Cloudflare Workers AI, OpenRouter free models, then the built-in template. Limits change often and are not always published, so each has a daily call budget in `config.yaml` and the pipeline stops at 85% of it. Only public game data is ever sent. **Groq is not used. GitHub Models is not used (retired July 30, 2026).**

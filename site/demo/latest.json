@@ -1,6 +1,10 @@
 {
  "schema": 1,
  "source": "demo",
+ "date_range": {
+  "min": "2026-10-25",
+  "max": "2026-11-16"
+ },
  "generated_utc": "2026-11-16T03:45:00Z",
  "timezone": "America/New_York",
  "sports": [

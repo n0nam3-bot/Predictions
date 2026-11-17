@@ -1,257 +1,250 @@
 (function () {
   'use strict';
-  const SPORTS = [['all', 'All'], ['mlb', 'MLB'], ['nfl', 'NFL'], ['nba', 'NBA'], ['nhl', 'NHL'], ['ufc', 'UFC'], ['dwcs', 'DWCS']];
-  const LABEL = Object.fromEntries(SPORTS);
-  const POLL_MS = 60000;
+  const SPORTS = { nfl: 'NFL', nba: 'NBA', nhl: 'NHL', mlb: 'MLB', ufc: 'UFC', dwcs: 'DWCS' };
   const params = new URLSearchParams(location.search);
   const localHost = ['localhost', '127.0.0.1', ''].includes(location.hostname);
-  const state = { data: null, filter: 'all', open: new Set(), offset: 0, banner: '', health: null, statusOpen: false, fetchedAt: 0 };
+  const state = { tz: 'America/New_York', date: null, filter: 'all', latest: null, days: {}, loading: true, error: '', open: new Set(),
+    offset: 0, statusOpen: false, health: null, demo: false, animate: true, banner: '' };
 
   const $ = (s) => document.querySelector(s);
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const now = () => Date.now() + state.offset;
   const odds = (n) => (n == null ? '' : n > 0 ? '+' + Math.round(n) : '\u2212' + Math.abs(Math.round(n)));
-  const pct = (x, d = 1) => (x == null ? '' : (x * 100).toFixed(d) + '%');
+  const pct = (x) => (x * 100).toFixed(1) + '%';
   const units = (u) => (u > 0 ? '+' : u < 0 ? '\u2212' : '') + Math.abs(u).toFixed(2) + 'u';
-  const tz = () => (state.data && state.data.timezone) || 'America/New_York';
-  const fmt = (iso, opts, zone) => new Intl.DateTimeFormat(undefined, Object.assign({ timeZone: zone }, opts)).format(new Date(iso));
-  const hm = { hour: 'numeric', minute: '2-digit' };
-  const localTime = (iso) => fmt(iso, hm);
-  const etTime = (iso) => fmt(iso, hm, tz());
-  const etKey = (iso) => new Intl.DateTimeFormat('en-CA', { timeZone: tz(), year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(iso));
+  const dash = '\u2013';
+  const wlv = (b) => b.w + dash + b.l + dash + b.v;
+  const etKey = (ms) => new Intl.DateTimeFormat('en-CA', { timeZone: state.tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(ms));
+  const today = () => etKey(now());
+  const addDays = (k, n) => new Date(Date.UTC(+k.slice(0, 4), +k.slice(5, 7) - 1, +k.slice(8, 10) + n)).toISOString().slice(0, 10);
+  const validKey = (k) => /^\d{4}-\d{2}-\d{2}$/.test(k || '') && addDays(k, 0) === k;
+  const clock = (iso) => new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(new Date(iso));
+  const fmtDay = (k, o) => new Intl.DateTimeFormat(undefined, Object.assign({ timeZone: 'UTC' }, o)).format(new Date(k + 'T12:00:00Z'));
+  const shortDay = (k) => (k === today() ? 'Today' : k === addDays(today(), -1) ? 'Yesterday' : k === addDays(today(), 1) ? 'Tomorrow' : fmtDay(k, { weekday: 'short', month: 'short', day: 'numeric' }));
+  const longDay = (k) => fmtDay(k, { weekday: 'long', month: 'short', day: 'numeric' });
+  const when = (k) => (k === today() ? 'today' : k === addDays(today(), -1) ? 'yesterday' : 'on ' + longDay(k));
   const mins = (iso) => Math.round((Date.parse(iso) - now()) / 60000);
-  const blank = () => ({ w: 0, l: 0, v: 0, pending: 0, win_pct: null, units: 0, roi: null });
-  const wlv = (b) => b.w + '\u2013' + b.l + '\u2013' + b.v;
+  const away = (g) => (g.kind === 'bout' ? g.home + ' vs ' + g.away : g.away + ' at ' + g.home);
+  const typo = (s) => String(s == null ? '' : s).replace(/(^|[\s(])-(?=\d)/g, '$1\u2212');
+  const sum = (a, f) => a.reduce((t, x) => t + f(x), 0);
 
-  function sameZone() { return localTime('2026-01-15T17:00:00Z') === etTime('2026-01-15T17:00:00Z'); }
-  function timeCell(iso) {
-    return '<span class="time">' + esc(localTime(iso)) + (sameZone() ? '' : '<small>' + esc(etTime(iso)) + ' ET</small>') + '</span>';
-  }
-
-  function matches(g) { return state.filter === 'all' || g.sport === state.filter; }
-
-  function todayFromGames(games) {
-    const key = etKey(new Date(now()).toISOString());
-    const b = blank();
-    games.forEach((g) => {
-      if (!g.pick || g.pick.verdict !== 'PLAY' || etKey(g.start_utc) !== key) return;
-      if (g.grade && ['W', 'L', 'V'].includes(g.grade.grade)) { b[g.grade.grade.toLowerCase()] += 1; b.units += g.grade.profit_units || 0; } else b.pending += 1;
-    });
-    return b;
-  }
-
-  function renderLedger() {
-    const d = state.data; if (!d || !d.records) { $('#ledger').innerHTML = ''; return; }
-    const r = d.records;
-    const all = state.filter === 'all';
-    const today = all ? r.today : todayFromGames(d.games.filter(matches));
-    const overall = all ? r.overall : (r.by_sport && r.by_sport[state.filter]) || blank();
-    const meta = (b, extra) => '<span class="meta">' + (b.win_pct == null ? 'No decided picks yet' : '<b>' + b.win_pct + '%</b> wins') +
-      (b.units ? ', <b class="' + (b.units >= 0 ? 'pos' : 'neg') + '">' + units(b.units) + '</b>' : '') +
-      (b.roi != null ? ', ROI ' + b.roi + '%' : '') + (b.pending ? ', ' + b.pending + ' pending' : '') + (extra || '') + '</span>';
-    const strip = (r.history || []).map((h) => {
-      const cls = h.w > h.l ? 'w' : h.l > h.w ? 'l' : (h.w + h.l + h.v) ? 'v' : '';
-      const total = h.w + h.l + h.v + h.pending;
-      return '<i class="' + cls + '" style="height:' + (18 + Math.min(total, 5) * 16) + '%" title="' + esc(h.date + ': ' + h.w + '-' + h.l + '-' + h.v) + '"></i>';
-    }).join('');
-    $('#ledger').innerHTML =
-      '<div class="rec"><span class="lbl">Today' + (all ? '' : ', ' + LABEL[state.filter]) + '</span><span class="num">' + wlv(today) + '</span>' + meta(today) + '</div>' +
-      '<div class="rec"><span class="lbl">Since launch' + (all ? '' : ', ' + LABEL[state.filter]) + '</span><span class="num">' + wlv(overall) + '</span>' +
-      meta(overall, all && r.streak ? ', streak <b>' + esc(r.streak) + '</b>' : '') + '</div>' +
-      '<div class="strip" role="img" aria-label="Daily results for the last 30 days, all sports">' + strip + '</div>' +
-      '<p class="strip-note">Last 30 days, all sports. Green: more wins, red: more losses, amber: even or voids.</p>';
-  }
-
-  function renderChips() {
-    $('#chips').innerHTML = SPORTS.map(([k, l]) => '<button class="chip" data-sport="' + k + '" aria-pressed="' + (state.filter === k) + '">' + l + '</button>').join('');
-  }
-
-  function resultPill(g) {
-    if (g.grade) {
-      const x = g.grade.grade;
-      if (x === 'W' || x === 'L' || x === 'V') return '<span class="pill ' + x.toLowerCase() + '">' + x + '</span><small>' + (x === 'V' ? 'void' : units(g.grade.profit_units || 0)) + '</small>';
-      return '<span class="pill late">Checking</span>';
-    }
-    return '';
-  }
-
-  function slip(g) {
-    const p = g.pick;
-    const cls = g.grade ? (g.grade.grade === 'W' ? ' done-w' : g.grade.grade === 'L' ? ' done-l' : '') : '';
-    return '<article class="slip' + cls + '"><div class="main"><span class="vs">' + esc(LABEL[g.sport]) + ', ' + esc(g.kind === 'bout' ? g.home + ' vs ' + g.away : g.away + ' at ' + g.home) + '</span>' +
-      '<h3>' + esc(p.selection_name) + ' moneyline ' + odds(p.odds) + '</h3>' +
-      '<div class="nums"><span>Edge <b>' + pct(p.edge) + '</b></span><span>Fair <b>' + odds(p.fair_odds) + '</b></span><span>Confidence <b>' + p.confidence + '/10</b></span></div>' +
-      '<div class="nums"><span>' + esc(localTime(g.start_utc)) + '</span>' + (g.grade ? '<span class="right">' + resultPill(g) + '</span>' : '') + '</div></div>' +
-      '<div class="stub"><span class="units">' + p.units + 'u</span><small>stake</small></div></article>';
-  }
-
-  function renderTop() {
-    const d = state.data; const el = $('#top');
-    if (!d) { el.innerHTML = ''; return; }
-    const tops = d.games.filter((g) => g.pick && g.pick.top_pick && matches(g))
-      .sort((a, b) => (!!a.grade - !!b.grade) || (a.start_utc < b.start_utc ? -1 : 1)).slice(0, 6);
-    el.innerHTML = '<h2 id="topH">Top picks</h2>' + (tops.length
-      ? '<p class="hint">The strongest plays, marked when posted. Up to five a day.</p><div class="slips">' + tops.map(slip).join('') + '</div>'
-      : '<p class="empty">No top picks right now. Plays only appear when the edge, the data coverage and the price all clear the bar.</p>');
-  }
-
-  function dayLabel(key) {
-    const todayKey = etKey(new Date(now()).toISOString());
-    const tomorrowKey = etKey(new Date(now() + 86400000).toISOString());
-    if (key === todayKey) return 'Today';
-    if (key === tomorrowKey) return 'Tomorrow';
-    return new Intl.DateTimeFormat(undefined, { timeZone: 'UTC', weekday: 'long', month: 'short', day: 'numeric' }).format(new Date(key + 'T12:00:00Z'));
-  }
-
-  function rightCell(g) {
-    const p = g.pick;
-    if (g.grade && p) return resultPill(g);
-    if (p) {
-      const live = g.status === 'in_progress' ? '<span class="pill live">Live</span>' : '';
-      if (p.verdict === 'PLAY') return live || '<span class="pill play">PLAY</span>' + (p.tag === 'LATE' ? '<small>posted late</small>' : '') ;
-      return live || '<span class="pill pass">PASS</span>';
-    }
-    if (g.missed) return '<span class="pill late">No pick</span><small>window missed</small>';
-    if (['cancelled', 'postponed'].includes(g.status)) return '<span class="pill v">' + esc(g.status) + '</span>';
-    if (g.status === 'final' || g.status === 'in_progress') return '<span class="pill pass">No pick</span>';
-    const m = mins(g.publish_at_utc);
-    return '<span class="pill">Posts ' + esc(localTime(g.publish_at_utc)) + '</span><small>' + (m > 0 ? 'in ' + (m >= 60 ? Math.floor(m / 60) + ' h ' + (m % 60) + ' min' : m + ' min') : 'due now') + '</small>';
-  }
-
-  function detail(g) {
-    const p = g.pick;
-    if (!p) {
-      const when = esc(localTime(g.publish_at_utc));
-      return g.missed ? '<p>The posting window passed before an analysis could be locked, so no pick exists for this game. It is excluded from every record.</p>'
-        : '<p>Analysis posts at ' + when + (sameZone() ? '' : ' (' + esc(etTime(g.publish_at_utc)) + ' ET)') + '. Picks are locked when posted and never edited.</p>';
-    }
-    const n = p.narrative || {};
-    const lowCov = p.coverage < 0.8;
-    const rows = [['Market', n.market], ['Matchup', n.matchup], ['Context', n.context], ['Projection', n.projection], ['Risk', n.risk]]
-      .filter((r) => r[1]).map((r) => '<dt>' + r[0] + '</dt><dd>' + esc(r[1]) + '</dd>').join('');
-    const inputs = Object.entries(p.inputs || {}).map(([k, v]) => esc(k.replace('_', ' ')) + (v.available ? ' (' + esc(v.source) + ')' : ' (unavailable)')).join(', ');
-    const grade = g.grade && g.grade.grade !== 'PENDING_REVIEW' ? '<p><b>Result: ' + g.grade.grade + '</b>, ' + esc(g.grade.reason || '') +
-      (g.grade.closing_odds != null ? '. Closing ' + odds(g.grade.closing_odds) + (g.grade.clv != null ? ', closing-line value ' + (g.grade.clv * 100).toFixed(1) + '%' : '') : '') + '.</p>' : '';
-    return '<p><b>' + esc(p.headline) + '</b></p>' + grade +
-      '<ul>' + (n.thesis || []).map((t) => '<li>' + esc(t) + '</li>').join('') + '</ul><dl>' + rows + '</dl>' +
-      '<p class="fine"><span class="cov' + (lowCov ? ' low' : '') + '">Data coverage ' + Math.round(p.coverage * 100) + '%</span>' +
-      (p.unavailable && p.unavailable.length ? 'Unavailable: ' + esc(p.unavailable.join(', ')) + '. ' : '') + '</p>' +
-      '<p class="fine">Inputs: ' + inputs + '. Posted ' + esc(localTime(p.published_utc)) + (p.tag === 'LATE' ? ' (late)' : '') + ', locked as ' + esc(p.hash) + ', text by ' + esc(p.narrative_source) + '.</p>';
-  }
-
-  function row(g) {
-    const open = state.open.has(g.id);
-    const p = g.pick;
-    const scoreLine = g.home_score != null && g.away_score != null ? ' <span class="pickline">' + Math.round(g.away_score) + '\u2013' + Math.round(g.home_score) + ' (away\u2013home)</span>' : '';
-    const pickline = p && p.verdict === 'PLAY' ? esc(p.selection_name) + ' ' + odds(p.odds) + ', ' + p.units + 'u' : p ? 'No bet' : '';
-    return '<div class="row"><button type="button" data-id="' + esc(g.id) + '" aria-expanded="' + open + '">' + timeCell(g.start_utc) +
-      '<span class="teams"><span class="sport">' + esc(LABEL[g.sport]) + '</span>' + esc(g.kind === 'bout' ? g.home + ' vs ' + g.away : g.away + ' at ' + g.home) +
-      '<span class="pickline">' + pickline + '</span>' + (g.status === 'final' ? scoreLine : '') + '</span><span class="right">' + rightCell(g) + '</span></button>' +
-      '<div class="detail"' + (open ? '' : ' hidden') + '>' + detail(g) + '</div></div>';
-  }
-
-  function renderSlate() {
-    const d = state.data; const el = $('#slate');
-    if (!d) { el.innerHTML = ''; return; }
-    const games = d.games.filter(matches);
-    const firstStart = {};
-    games.forEach((g) => { if (g.kind === 'bout') firstStart[g.event_name] = !firstStart[g.event_name] || g.start_utc < firstStart[g.event_name] ? g.start_utc : firstStart[g.event_name]; });
-    const key = (g) => (g.kind === 'bout' ? firstStart[g.event_name] : g.start_utc) + '|' + g.start_utc + '|' + g.id;
-    games.sort((a, b) => (key(a) < key(b) ? -1 : 1));
-    let html = '<h2 id="slateH">Slate</h2>';
-    if (!games.length) html += '<p class="empty">' + (d.empty ? 'Nothing has been published yet.' : 'No games in this window' + (state.filter === 'all' ? '' : ' for ' + LABEL[state.filter]) + '. Leagues in their off-season simply have nothing to show.') + '</p>';
-    let day = '', ev = '';
-    games.forEach((g) => {
-      const k = etKey(g.kind === 'bout' ? firstStart[g.event_name] : g.start_utc);
-      if (k !== day) { day = k; ev = ''; html += '<div class="day">' + esc(dayLabel(k)) + '</div>'; }
-      if (g.kind === 'bout' && g.event_name !== ev) { ev = g.event_name; html += '<div class="hint"><b>' + esc(ev) + '</b>, card posts ' + esc(localTime(g.publish_at_utc)) + '</div>'; }
-      html += row(g);
-    });
-    el.innerHTML = html;
-  }
-
-  function renderBanner() {
-    const d = state.data; const msgs = [];
-    if (state.banner) msgs.push(state.banner);
-    if (d && d.demo_note) msgs.push(d.demo_note);
-    if (d && d.source === 'live' && d.generated_utc) {
-      const age = (now() - Date.parse(d.generated_utc)) / 60000;
-      const overdue = d.games.some((g) => !g.pick && !g.missed && g.status === 'scheduled' && mins(g.publish_at_utc) < -5 && mins(g.start_utc) > 0);
-      if (age > 15 && overdue) msgs.push('Data may be delayed: the last update was ' + Math.round(age) + ' minutes ago.');
-    }
-    if (d && d.empty) msgs.push('The database is connected but nothing has been published yet.');
-    const el = $('#banner'); el.hidden = !msgs.length; el.textContent = msgs.join(' ');
-  }
-
-  function renderStatus() {
-    const el = $('#status'); el.hidden = !state.statusOpen;
-    if (!state.statusOpen) return;
-    const d = state.data || {}; const h = d.health || {}; const api = state.health;
-    const src = Object.entries(h.sources || {});
-    const bad = src.filter(([, v]) => !v.ok);
-    const row = (a, b) => '<tr><td>' + a + '</td><td>' + b + '</td></tr>';
-    const t = (iso) => (iso ? esc(localTime(iso)) + ' (' + Math.max(0, Math.round((now() - Date.parse(iso)) / 60000)) + ' min ago)' : 'never');
-    el.innerHTML = '<h2>Status</h2><table>' +
-      row('Data source', esc(d.source || 'none')) + row('Last update', t(d.generated_utc)) + row('Last tick', t(h.last_tick_utc)) + row('Last pick posted', t(h.last_publish_utc)) +
-      row('Data feeds', src.length ? (bad.length ? '<span class="bad">' + bad.length + ' failing</span>: ' + esc(bad.map(([k, v]) => k + ' (' + v.detail + ')').join('; ')) : '<span class="ok">all ' + src.length + ' ok</span>') : 'none yet') +
-      row('Free LLM budget today', Object.keys(h.quota || {}).length ? esc(Object.entries(h.quota).map(([k, v]) => k.split(':')[1] + ' ' + v.used + '/' + v.cap).join(', ')) : 'not used (template text)') +
-      row('Ledger check', h.ledger && h.ledger.ok === true ? '<span class="ok">clean</span>' : h.ledger && h.ledger.ok === false ? '<span class="bad">problems: ' + esc((h.ledger.problems || []).join('; ')) + '</span>' : 'not run yet') +
-      row('Deployed commit', api ? esc((api.commit || 'unknown').slice(0, 7)) + (api.ok ? '' : ' <span class="bad">(database error)</span>') : 'checking') +
-      row('Model', h.experimental ? 'Experimental baseline, not backtested' : 'n/a') + '</table>';
-  }
-
-  function renderAll() { renderBanner(); renderLedger(); renderChips(); renderTop(); renderSlate(); renderStatus(); }
-
+  /* ---------- data ---------- */
   async function fetchJson(url) {
     const r = await fetch(url, { cache: 'no-store' });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     return r.json();
   }
-
-  async function load() {
-    let data = null;
-    if (!params.has('demo')) {
-      try { data = await fetchJson('/api/latest'); state.banner = ''; } catch (e) { state.banner = state.data ? 'Offline or delayed: showing the last data received.' : ''; }
+  function setLatest(d) {
+    state.latest = d;
+    state.tz = d.timezone || state.tz;
+    state.demo = d.source === 'demo';
+    state.offset = state.demo ? Date.parse(d.generated_utc) - Date.now() : 0;
+  }
+  async function loadLatest() {
+    try {
+      if (params.has('demo')) throw new Error('demo');
+      setLatest(await fetchJson('/api/latest'));
+      state.banner = '';
+    } catch (e) {
+      if (!state.latest && (params.has('demo') || localHost)) {
+        try { setLatest(await fetchJson('demo/latest.json')); state.banner = ''; } catch (e2) { state.error = 'Could not load picks.'; }
+      } else if (state.latest) state.banner = 'Offline or delayed. Showing the last data received.';
+      else state.error = 'Could not load picks.';
     }
-    if (!data && !state.data && (params.has('demo') || localHost)) {
-      try { data = await fetchJson('demo/latest.json'); state.banner = ''; } catch (e) { /* fall through */ }
-    }
-    if (!data && !state.data) state.banner = 'Could not load picks. Retrying every minute.';
-    if (data) {
-      state.data = data;
-      state.offset = data.source === 'demo' ? Date.parse(data.generated_utc) - Date.now() : 0;
-      state.fetchedAt = Date.now();
-    }
-    renderAll();
+  }
+  async function loadDay(date, force) {
+    if (date === today() || !state.latest && !state.error) return;
+    const cached = state.days[date];
+    if (cached && !force && Date.now() - cached.at < (date < addDays(today(), -2) ? 3600000 : 60000)) return;
+    state.loading = !cached; state.error = '';
+    try {
+      if (state.demo) state.days[date] = { at: Date.now(), games: state.latest.games.filter((g) => etKey(Date.parse(g.start_utc)) === date) };
+      else state.days[date] = { at: Date.now(), games: (await fetchJson('/api/day?date=' + date)).games };
+    } catch (e) { if (!cached) state.error = 'Could not load ' + longDay(date) + '.'; }
+    state.loading = false;
+  }
+  function dayGames() {
+    if (state.date === today()) return state.latest ? state.latest.games.filter((g) => etKey(Date.parse(g.start_utc)) === state.date) : null;
+    return state.days[state.date] ? state.days[state.date].games : null;
   }
 
-  function setFilter(k) {
-    state.filter = k;
-    try { localStorage.setItem('picks.filter', k); } catch (e) { /* storage can be unavailable */ }
-    history.replaceState(null, '', k === 'all' ? location.pathname + location.search : '#' + k);
-    renderAll();
+  /* ---------- views ---------- */
+  function renderNav() {
+    const isToday = state.date === today();
+    $('#dateLabel').textContent = fmtDay(state.date, { weekday: 'short', month: 'short', day: 'numeric' });
+    const input = $('#dateInput'); input.value = state.date;
+    const r = state.latest && state.latest.date_range;
+    input.min = r && r.min ? r.min : ''; input.max = addDays(today(), 14);
+    $('#prev').disabled = !!(r && r.min && state.date <= r.min);
+    $('#next').disabled = state.date >= addDays(today(), 14);
+    $('#todayBtn').hidden = isToday;
   }
 
-  function init() {
-    const fromHash = location.hash.replace('#', '');
-    let saved = null; try { saved = localStorage.getItem('picks.filter'); } catch (e) { /* ignore */ }
-    state.filter = LABEL[fromHash] ? fromHash : LABEL[saved] ? saved : 'all';
-    document.addEventListener('click', (e) => {
-      const chip = e.target.closest('.chip'); if (chip) return setFilter(chip.dataset.sport);
-      const rowBtn = e.target.closest('.row > button');
-      if (rowBtn) { const id = rowBtn.dataset.id; state.open.has(id) ? state.open.delete(id) : state.open.add(id); renderSlate(); const again = document.querySelector('.row > button[data-id="' + CSS.escape(id) + '"]'); if (again) again.focus({ preventScroll: true }); }
+  function dayRecord(games) {
+    const b = { w: 0, l: 0, v: 0, units: 0, pending: 0 };
+    games.forEach((g) => {
+      if (!g.pick || g.pick.verdict !== 'PLAY') return;
+      if (g.grade && ['W', 'L', 'V'].includes(g.grade.grade)) { b[g.grade.grade.toLowerCase()] += 1; b.units += g.grade.profit_units || 0; } else b.pending += 1;
     });
+    return b;
+  }
+
+  function renderSummary(all, games) {
+    const el = $('#summary');
+    if (!all) { el.innerHTML = '<h1>&nbsp;</h1>'; return; }
+    const plays = games.filter((g) => g.pick && g.pick.verdict === 'PLAY');
+    const analysed = games.filter((g) => g.pick).length;
+    const rec = dayRecord(games);
+    const label = state.filter === 'all' ? '' : SPORTS[state.filter] + ' ';
+    let h, p;
+    if (!games.length) { h = 'No ' + label + 'games ' + when(state.date); p = state.date > today() ? 'The schedule for this day has not been published yet.' : 'Nothing is stored for this day. Leagues in their off-season simply have no games.'; }
+    else if (plays.length) {
+      h = plays.length + ' ' + label + (plays.length === 1 ? 'play ' : 'plays ') + when(state.date);
+      const bits = [games.length + (games.length === 1 ? ' game' : ' games')];
+      if (rec.w + rec.l + rec.v) bits.push(rec.w + ' won, ' + rec.l + ' lost' + (rec.v ? ', ' + rec.v + ' void' : ''));
+      if (rec.pending) bits.push(rec.pending + ' to settle');
+      p = esc(bits.join('. ')) + '.' + (rec.w + rec.l ? ' <span class="' + (rec.units >= 0 ? 'pos' : 'neg') + '">' + units(rec.units) + '</span>' : '');
+    } else if (analysed) { h = 'No ' + label + 'plays ' + when(state.date); p = analysed + ' of ' + games.length + ' games analysed, and every one was a pass.'; }
+    else { h = games.length + ' ' + label + (games.length === 1 ? 'game ' : 'games ') + when(state.date); p = 'Analysis posts about 30 minutes before each game and 90 minutes before the first fight on a card.'; }
+    const ov = state.latest && state.latest.records && (state.filter === 'all' ? state.latest.records.overall : (state.latest.records.by_sport || {})[state.filter]);
+    const record = ov ? '<div class="record"><span>Overall <b>' + wlv(ov) + '</b>' + (ov.win_pct != null ? ', ' + ov.win_pct + '%' : '') + (ov.units ? ', ' + units(ov.units) : '') + '</span></div>' : '';
+    el.innerHTML = '<h1>' + esc(h) + '</h1><p>' + (p.includes('<span') ? p : esc(p)) + '</p>' + record;
+  }
+
+  function renderTabs(all) {
+    const present = new Set((all || []).map((g) => g.sport)); present.add(state.filter === 'all' ? 'all' : state.filter);
+    const keys = ['all'].concat(Object.keys(SPORTS).filter((k) => present.has(k)));
+    $('#tabs').innerHTML = keys.map((k) => '<button class="tab" data-sport="' + k + '" aria-pressed="' + (state.filter === k) + '">' + (k === 'all' ? 'All' : SPORTS[k]) + '</button>').join('');
+  }
+
+  function detail(g) {
+    const p = g.pick, n = p.narrative || {};
+    const rows = [['Market', n.market], ['Matchup', n.matchup], ['Context', n.context], ['Projection', n.projection], ['Risk', n.risk]]
+      .filter((r) => r[1]).map((r) => '<dt>' + r[0] + '</dt><dd>' + esc(typo(r[1])) + '</dd>').join('');
+    const res = g.grade && ['W', 'L', 'V'].includes(g.grade.grade)
+      ? '<p><b class="' + g.grade.grade.toLowerCase() + '">Result: ' + g.grade.grade + '</b>, ' + esc(g.grade.reason || '') +
+        (g.grade.closing_odds != null ? '. Closing line ' + odds(g.grade.closing_odds) + (g.grade.clv != null ? ', closing-line value ' + (g.grade.clv * 100).toFixed(1) + '%' : '') : '') + '.</p>' : '';
+    const inputs = Object.entries(p.inputs || {}).map(([k, v]) => esc(k.replace('_', ' ')) + (v.available ? '' : ' (unavailable)')).join(', ');
+    return '<p><b>' + esc(typo(p.verdict === 'PLAY' ? p.headline : 'Pass: ' + (p.reason || 'no edge'))) + '</b></p>' + res +
+      '<ul>' + (n.thesis || []).map((t) => '<li>' + esc(typo(t)) + '</li>').join('') + '</ul><dl>' + rows + '</dl>' +
+      '<p class="fine">Coverage ' + Math.round(p.coverage * 100) + '%' + (p.unavailable && p.unavailable.length ? ', missing ' + esc(p.unavailable.join(', ')) : '') +
+      '. Inputs: ' + inputs + '. Posted ' + esc(clock(p.published_utc)) + (p.tag === 'LATE' ? ' (late)' : '') + ', locked as <code>' + esc(p.hash) + '</code>.</p>';
+  }
+
+  function row(g, kind) {
+    const p = g.pick; const open = state.open.has(g.id);
+    let l1, l2 = '', out = '';
+    if (kind === 'plays') {
+      l1 = esc(p.selection_name) + ' ' + odds(p.odds);
+      l2 = (p.top_pick ? '<span class="top">Top pick</span>, ' : '') + (g.kind === 'bout' ? 'vs ' + esc(p.selection === 'home' ? g.away : g.home) : p.selection === 'home' ? 'vs ' + esc(g.away) : 'at ' + esc(g.home));
+      if (g.grade && ['W', 'L', 'V'].includes(g.grade.grade)) out = '<span class="big ' + g.grade.grade.toLowerCase() + '">' + g.grade.grade + '</span><span class="sub">' + (g.grade.grade === 'V' ? 'void' : units(g.grade.profit_units || 0)) + '</span>';
+      else out = '<span class="big">' + p.units + 'u</span>' + (g.status === 'in_progress' ? '<span class="sub">Live</span>' : g.status === 'final' ? '<span class="sub">Checking</span>' : '');
+    } else if (kind === 'passed') {
+      l1 = esc(away(g)); l2 = esc(p.reason || 'No edge');
+      out = g.home_score != null && g.status === 'final' ? '<span class="sub">' + Math.round(g.away_score) + dash + Math.round(g.home_score) + '</span>' : g.status === 'in_progress' ? '<span class="sub">Live</span>' : '';
+    } else if (kind === 'waiting') {
+      const m = mins(g.publish_at_utc);
+      l1 = esc(away(g)); l2 = 'Analysis posts ' + esc(clock(g.publish_at_utc)) + (m > 0 ? ', in ' + (m >= 60 ? Math.floor(m / 60) + ' h ' + (m % 60) + ' min' : m + ' min') : ', due now');
+    } else {
+      l1 = esc(away(g));
+      l2 = (g.missed ? 'Posting window missed, so it is not recorded' : ['cancelled', 'postponed'].includes(g.status) ? g.status[0].toUpperCase() + g.status.slice(1) : 'Not analysed');
+      if (g.status === 'final' && g.home_score != null) out = '<span class="sub">' + Math.round(g.away_score) + dash + Math.round(g.home_score) + '</span>';
+    }
+    const inner = '<span class="when">' + esc(clock(g.start_utc)) + '<small>' + esc(SPORTS[g.sport]) + '</small></span><span class="what"><span class="l1">' + l1 + '</span><span class="l2">' + l2 + '</span></span><span class="out">' + out + '</span>';
+    if (!p) return '<div class="row"><div class="row-btn">' + inner + '</div></div>';
+    return '<div class="row"><button type="button" class="row-btn" data-id="' + esc(g.id) + '" aria-expanded="' + open + '">' + inner + '</button>' +
+      '<div class="panel" data-open="' + open + '"><div><div class="detail">' + detail(g) + '</div></div></div></div>';
+  }
+
+  function renderList(games) {
+    const el = $('#list'); el.setAttribute('aria-busy', String(state.loading));
+    if (games == null) {
+      el.innerHTML = state.error ? '<p class="empty">' + esc(state.error) + '<button class="retry" id="retry">Try again</button></p>' : '<div class="sk"></div>'.repeat(5);
+      return;
+    }
+    const f = games.filter((g) => state.filter === 'all' || g.sport === state.filter).sort((a, b) => (a.start_utc < b.start_utc ? -1 : a.start_utc > b.start_utc ? 1 : a.id < b.id ? -1 : 1));
+    const plays = f.filter((g) => g.pick && g.pick.verdict === 'PLAY').sort((a, b) => (b.pick.top_pick - a.pick.top_pick) || (a.start_utc < b.start_utc ? -1 : 1));
+    const passed = f.filter((g) => g.pick && g.pick.verdict !== 'PLAY');
+    const waiting = f.filter((g) => !g.pick && !g.missed && g.status === 'scheduled');
+    const other = f.filter((g) => !g.pick && !(!g.missed && g.status === 'scheduled'));
+    const group = (title, list, kind, cls) => (list.length ? '<section class="group ' + cls + '"><h2>' + title + ' ' + list.length + '</h2>' + list.map((g) => row(g, kind)).join('') + '</section>' : '');
+    el.innerHTML = '<div class="' + (state.animate ? 'enter' : '') + '">' + group('Plays', plays, 'plays', 'plays') + group('Passed', passed, 'passed', 'quiet') +
+      group('Waiting for analysis', waiting, 'waiting', 'quiet') + group('Not analysed', other, 'other', 'quiet') + '</div>';
+    if (!f.length) el.innerHTML = '';
+  }
+
+  function renderStatus() {
+    const el = $('#status'); el.hidden = !state.statusOpen;
+    if (!state.statusOpen) return;
+    const d = state.latest || {}; const h = d.health || {}; const api = state.health;
+    const ago = (iso) => (iso ? clock(iso) + ', ' + Math.max(0, Math.round((now() - Date.parse(iso)) / 60000)) + ' min ago' : 'never');
+    const src = Object.entries(h.sources || {}); const bad = src.filter(([, v]) => !v.ok);
+    const rows = [['Data', esc(d.source || 'none')], ['Last update', esc(ago(d.generated_utc))], ['Last tick', esc(ago(h.last_tick_utc))], ['Last pick posted', esc(ago(h.last_publish_utc))],
+      ['Feeds', src.length ? (bad.length ? '<span class="bad">' + bad.length + ' failing</span>, ' + esc(bad.map(([k, v]) => k + ': ' + v.detail).join('; ')) : '<span class="ok">All ' + src.length + ' working</span>') : 'None yet'],
+      ['Ledger', h.ledger && h.ledger.ok === true ? '<span class="ok">Clean</span>' : h.ledger && h.ledger.ok === false ? '<span class="bad">' + esc((h.ledger.problems || []).join('; ')) + '</span>' : 'Not checked yet'],
+      ['Deployed commit', api ? esc((api.commit || 'unknown').slice(0, 7)) + (api.ok ? '' : ' (database error)') : 'Checking'],
+      ['Model', h.experimental ? 'Experimental baseline, not backtested' : 'n/a']];
+    el.innerHTML = '<h2>Status</h2><dl>' + rows.map((r) => '<dt>' + r[0] + '</dt><dd>' + r[1] + '</dd>').join('') + '</dl>';
+  }
+
+  function render() {
+    const all = dayGames();
+    const games = (all || []).filter((g) => state.filter === 'all' || g.sport === state.filter);
+    renderNav(); renderSummary(all, games); renderTabs(all); renderList(all);
+    const b = $('#banner'); const msg = [state.banner, state.latest && state.latest.demo_note].filter(Boolean).join(' '); b.hidden = !msg; b.textContent = msg;
+    renderStatus(); state.animate = false;
+  }
+
+  /* ---------- actions ---------- */
+  function writeHash() {
+    const p = [];
+    if (state.date !== today()) p.push('d=' + state.date);
+    if (state.filter !== 'all') p.push('s=' + state.filter);
+    history.replaceState(null, '', p.length ? '#' + p.join('&') : location.pathname + location.search);
+  }
+  async function setDate(k) {
+    if (!validKey(k) || k === state.date) return;
+    state.date = k; state.animate = true; state.error = ''; writeHash(); render();
+    await loadDay(k, false); state.animate = true; render();
+  }
+  function setFilter(k) { state.filter = k; state.animate = true; try { localStorage.setItem('picks.filter', k); } catch (e) { /* storage may be blocked */ } writeHash(); render(); }
+  function readHash() {
+    const h = location.hash.replace('#', ''); const out = {};
+    if (SPORTS[h]) out.s = h; else new URLSearchParams(h).forEach((v, k) => { out[k] = v; });
+    return out;
+  }
+
+  async function init() {
+    const h = readHash(); let saved = null; try { saved = localStorage.getItem('picks.filter'); } catch (e) { /* ignore */ }
+    state.filter = SPORTS[h.s] ? h.s : SPORTS[saved] ? saved : 'all';
+    state.date = validKey(h.d) ? h.d : today();
+    render();
+    await loadLatest();
+    if (!validKey(h.d)) state.date = today();
+    await loadDay(state.date, true);
+    state.animate = true; render();
+
+    $('#prev').addEventListener('click', () => setDate(addDays(state.date, -1)));
+    $('#next').addEventListener('click', () => setDate(addDays(state.date, 1)));
+    $('#todayBtn').addEventListener('click', () => setDate(today()));
+    $('#dateInput').addEventListener('change', (e) => setDate(e.target.value));
     $('#statusBtn').addEventListener('click', async () => {
       state.statusOpen = !state.statusOpen; $('#statusBtn').setAttribute('aria-expanded', String(state.statusOpen)); renderStatus();
-      if (state.statusOpen && state.data && state.data.source !== 'demo') { try { state.health = await fetchJson('/api/health'); } catch (e) { state.health = { ok: false, commit: null }; } renderStatus(); }
+      if (state.statusOpen && !state.demo) { try { state.health = await fetchJson('/api/health'); } catch (e) { state.health = { ok: false, commit: null }; } renderStatus(); }
     });
-    window.addEventListener('hashchange', () => { const k = location.hash.replace('#', ''); if (LABEL[k] && k !== state.filter) { state.filter = k; renderAll(); } });
-    document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
-    setInterval(() => { if (!document.hidden) load(); }, POLL_MS);
-    setInterval(() => { if (!document.hidden && state.data) { renderSlate(); renderBanner(); } }, 30000);
-    renderChips();
-    load();
+    document.addEventListener('click', (e) => {
+      const tab = e.target.closest('.tab'); if (tab) return setFilter(tab.dataset.sport);
+      if (e.target.closest('#retry')) { state.error = ''; state.loading = true; render(); loadDay(state.date, true).then(render); return; }
+      const btn = e.target.closest('.row-btn[data-id]'); if (!btn) return;
+      const id = btn.dataset.id; const panel = btn.nextElementSibling; const open = !state.open.has(id);
+      open ? state.open.add(id) : state.open.delete(id);
+      btn.setAttribute('aria-expanded', String(open)); panel.dataset.open = String(open);
+    });
+    window.addEventListener('hashchange', () => { const x = readHash(); if (validKey(x.d)) setDate(x.d); else if (!x.d && state.date !== today()) setDate(today()); if (x.s && SPORTS[x.s] && x.s !== state.filter) setFilter(x.s); });
+    const refresh = async () => { if (document.hidden) return; await loadLatest(); if (state.date > addDays(today(), -1) && state.date !== today()) await loadDay(state.date, true); render(); };
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
+    setInterval(refresh, 60000);
+    setInterval(() => { if (!document.hidden) render(); }, 30000);
   }
-
   init();
 })();

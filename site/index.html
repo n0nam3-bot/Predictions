@@ -4,45 +4,47 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<title>Pre-game picks board</title>
-<meta name="description" content="Pre-game analysis and picks, posted automatically before every game and fight card.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Big+Shoulders+Display:wght@700;800&display=swap" rel="stylesheet">
+<title>Predictions</title>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-left" viewBox="0 0 24 24"><path d="M14.5 5.5 8 12l6.5 6.5"/></symbol>
+  <symbol id="i-right" viewBox="0 0 24 24"><path d="M9.5 5.5 16 12l-6.5 6.5"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M5.5 9.5 12 16l6.5-6.5"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14" rx="2.5"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/></symbol>
+</svg>
+
 <div class="page">
-  <header class="top">
-    <div>
-      <h1>Pre-game picks</h1>
-      <p class="sub">Analysis posts about 30 minutes before each team game and 90 minutes before the first fight on a card.</p>
-    </div>
-    <button class="status-btn" id="statusBtn" aria-expanded="false" aria-controls="status">Status</button>
+  <header class="bar">
+    <span class="brand">Predictions</span>
+    <button class="text-btn" id="statusBtn" aria-expanded="false" aria-controls="status">Status</button>
   </header>
+
+  <div class="nav">
+    <div class="seg" role="group" aria-label="Choose a date">
+      <button class="seg-btn" id="prev" aria-label="Previous day"><svg class="icon"><use href="#i-left"/></svg></button>
+      <label class="seg-date">
+        <svg class="icon"><use href="#i-cal"/></svg>
+        <span id="dateLabel">Today</span>
+        <input type="date" id="dateInput" aria-label="Pick a date">
+      </label>
+      <button class="seg-btn" id="next" aria-label="Next day"><svg class="icon"><use href="#i-right"/></svg></button>
+    </div>
+    <button class="primary" id="todayBtn">Today</button>
+  </div>
 
   <div id="banner" class="banner" role="status" hidden></div>
 
-  <section class="ledger" id="ledger" aria-label="Record"></section>
+  <section id="summary" class="summary" aria-live="polite"></section>
+  <nav id="tabs" class="tabs" aria-label="Sport"></nav>
+  <main id="list" aria-busy="true"></main>
 
-  <nav class="chips" id="chips" aria-label="Filter by sport"></nav>
-
-  <main>
-    <section id="top" aria-labelledby="topH"></section>
-    <section id="slate" aria-labelledby="slateH"></section>
-  </main>
-
-  <section class="status" id="status" hidden aria-label="System status"></section>
-
-  <details class="how">
-    <summary>How picks are made and graded</summary>
-    <p>Each game gets a facts packet (market line, rest, recent form, injuries when available). A small model nudges the no-vig market probability; the edge is the model’s win chance minus the market’s. A pick is a PLAY only when the edge, the data coverage and the price all clear the thresholds; otherwise it is a PASS and nothing is recorded.</p>
-    <p>Picks are locked when posted and never edited. A result is W, L or V (void: push, tie or draw on a moneyline, cancelled, or postponed more than 48 hours). Win % leaves voids out. Profit is in units at the price posted. Top picks are marked at posting time, up to five a day.</p>
-    <p>This is an experimental baseline that has not been backtested. Treat every pick as unproven until the record says otherwise.</p>
-  </details>
+  <section id="status" class="status" hidden></section>
 
   <footer>
-    <p>Informational only, not betting advice, and nothing here is guaranteed. 21+. If gambling is a problem, call 1-800-GAMBLER.</p>
+    <p>Picks are locked when posted and never edited. A result is W, L or V (void: push, tie, cancelled or postponed more than 48 hours). Win % leaves out voids; profit is in units at the posted price. This is an unvalidated baseline, so treat every pick as unproven.</p>
+    <p>Informational only, not betting advice. 21+. Problem gambling help: 1-800-GAMBLER.</p>
   </footer>
 </div>
 <script src="app.js"></script>

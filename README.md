@@ -7,6 +7,8 @@ How it fits together (all free tiers):
 - **Turso** (SQLite over HTTPS) is the system of record. Picks are insert-only with a hash chain, exported daily to `data/ledger/`.
 - **Vercel** serves `site/` and a read-only API in `api/`.
 
+Visitors can step through any date with the date control: today updates live, past days show every game with its locked pick and result.
+
 Start here: [`docs/SETUP_PHONE.md`](docs/SETUP_PHONE.md). Rules and limits: [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md). Feeds: [`docs/DATA_SOURCES.md`](docs/DATA_SOURCES.md). Problems: [`docs/RUNBOOK.md`](docs/RUNBOOK.md).
 
 ## Honest status (v0.1)
