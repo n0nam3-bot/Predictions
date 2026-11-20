@@ -14,7 +14,11 @@ on:
         description: 'What to run'
         type: choice
         default: tick
-        options: [tick, schedule, grade, ledger, verify, audit, setup-check, demo]
+        options: [tick, schedule, grade, ledger, verify, backfill, backtest, audit, setup-check, demo]
+      days:
+        description: 'For backfill: how many past days to load (up to about 390)'
+        required: false
+        default: '240'
       simulate_now:
         description: 'Pretend it is this UTC time, for example 2026-11-15T23:55:00Z (empty = real time)'
         required: false
@@ -35,12 +39,14 @@ jobs:
       SCHEDULE: ${{ github.event.schedule }}
       INPUT_TASK: ${{ github.event.inputs.task }}
       NOW: ${{ github.event.inputs.simulate_now }}
+      DAYS: ${{ github.event.inputs.days }}
       TURSO_URL: ${{ secrets.TURSO_URL }}
       TURSO_WRITE_TOKEN: ${{ secrets.TURSO_WRITE_TOKEN }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
       CLOUDFLARE_AI: ${{ secrets.CLOUDFLARE_AI }}
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
       INBOX_PAT_SET: ${{ secrets.INBOX_PAT != '' }}
       SITE_URL: ${{ vars.SITE_URL }}
     steps:
@@ -75,6 +81,7 @@ jobs:
           case "$TASK" in
             audit) python scripts/source_audit.py ;;
             setup-check) python scripts/setup_check.py ;;
+            backfill) python -m picks.cli backfill --days "${DAYS:-45}" ${NOW:+--now "$NOW"} ;;
             demo) python -m picks.cli demo --out "$RUNNER_TEMP/demo.json" ;;
             *) python -m picks.cli "$TASK" ${NOW:+--now "$NOW"} ;;
           esac
