@@ -15,14 +15,63 @@ def pct(x):
     return f"{x * 100:.1f}%"
 
 
+def signed(x, nd=1):
+    return f"{'+' if x > 0 else '\u2212' if x < 0 else ''}{abs(x):.{nd}f}"
+
+
 def _name(packet, side):
     return packet["game"]["home" if side == "home" else "away"]
+
+
+UNKNOWN = {
+    "nhl": "The starting goalies are not in this data, and goaltending is the biggest swing factor in hockey.",
+    "nba": "Late scratches and rotation changes are not captured, and they can move an NBA line quickly.",
+    "nfl": "Quarterback status and weather are not factored in.",
+    "mlb": "The starting pitchers are not in this data, and they drive baseball lines.",
+    "ufc": "Fighter styles, reach, layoffs and weight cuts are not connected, so this bout has no real analysis.",
+    "dwcs": "Fighter styles, reach, layoffs and weight cuts are not connected, so this bout has no real analysis.",
+}
+
+
+def _days(n):
+    return "back-to-back" if n == 0 else f"{n} day{'s' if n != 1 else ''} off"
+
+
+def _context(packet, model):
+    g, inputs = packet["game"], packet["inputs"]
+    home, away = g["home"], g["away"]
+    out = []
+    sr = inputs["schedule_rest"]["value"]
+    if sr:
+        out.append(f"Schedule: {home} {_days(sr['home_days_off'])}, {away} {_days(sr['away_days_off'])}. "
+                   f"Games in the last 7 days including this one: {home} {sr['home_games_in_last_7_days']}, {away} {sr['away_games_in_last_7_days']}.")
+    else:
+        out.append(f"Rest and schedule are unavailable ({inputs['schedule_rest']['reason']}).")
+    rf = inputs["recent_form"]["value"]
+    unit = (inputs["ratings"]["value"] or {}).get("unit", "points")
+    if rf:
+        h, a = rf["home"], rf["away"]
+        out.append(f"Recent form: {home} {h['w']}-{h['l']} over its last {h['games']} ({signed(h['diff'], 0)} {unit}); "
+                   f"{away} {a['w']}-{a['l']} over its last {a['games']} ({signed(a['diff'], 0)} {unit}).")
+    inj = inputs["injuries"]["value"]
+    if inj:
+        for side, name in (("home", home), ("away", away)):
+            names = [f"{p['name']} ({p['status']})" for p in inj[side]]
+            lt = inj[f"{side}_long_term"]
+            if names:
+                out.append(f"{name} out or doubtful: " + ", ".join(names) + (f", plus {lt} on long-term injured reserve (not listed)." if lt else "."))
+            else:
+                out.append(f"{name} has nobody listed out or doubtful" + (f" ({lt} on long-term injured reserve, not listed)." if lt else "."))
+        out.append("The feed lists who is out, not how much each player matters, so the size of these absences is not measured.")
+    else:
+        out.append(f"Injury data is unavailable ({inputs['injuries']['reason']}).")
+    return " ".join(out)
 
 
 def template(packet, model, decision):
     g, inputs = packet["game"], packet["inputs"]
     home, away = g["home"], g["away"]
-    mk = inputs["market"]["value"]
+    mk, rat = inputs["market"]["value"], inputs["ratings"]["value"]
     sec = {}
     if mk:
         line = (f"Moneyline: {home} {mk['home_ml']:+.0f}, {away} {mk['away_ml']:+.0f}"
@@ -34,33 +83,33 @@ def template(packet, model, decision):
         sec["market"] = line
     else:
         sec["market"] = "Market line is unavailable for this game, so nothing can be priced."
-    sec["matchup"] = ("Team and fighter efficiency data (pace, shooting, striking, grappling) is unavailable in this build; "
-                      "only the market, rest and recent form are used.")
-    ctx = []
-    for k, label in (("schedule_rest", "Rest and schedule"), ("recent_form", "Recent form"), ("injuries", "Injury data")):
-        v = inputs[k]["value"]
-        if v is None:
-            ctx.append(f"{label} is unavailable ({inputs[k]['reason']}).")
-    notes = [a["text"] + "." for a in (model or {}).get("adjustments", [])]
-    inj = inputs["injuries"]["value"]
-    if inj:
-        for side in ("home", "away"):
-            names = [f"{p['name']} ({p['status']})" for p in inj.get(side, [])]
-            if names:
-                ctx.append(f"{_name(packet, side)} injury list: " + ", ".join(names) + ".")
-            else:
-                ctx.append(f"{_name(packet, side)} has no listed injuries.")
-    sec["context"] = " ".join(notes + ctx) or "No context inputs available."
+    if rat:
+        stronger = home if rat["home_elo"] >= rat["away_elo"] else away
+        sec["matchup"] = (f"Elo ratings from {rat['home_games']} games for {home} and {rat['away_games']} for {away}: {home} {rat['home_elo']}, {away} {rat['away_elo']} "
+                          f"({stronger} rates stronger by {rat['elo_gap']}). With a home edge of {rat['home_adv']} rating points that is {pct(rat['p_home'])} for {home}. "
+                          f"Average margin: {home} {signed(rat['home_margin'], 2)} {rat['unit']} per game ({rat['home_record']}), "
+                          f"{away} {signed(rat['away_margin'], 2)} ({rat['away_record']}).")
+    elif g["kind"] == "bout":
+        sec["matchup"] = "Fighter statistics are not connected, so this bout has no matchup analysis."
+    else:
+        sec["matchup"] = f"The team rating is unavailable: {inputs['ratings']['reason']}."
+    sec["context"] = _context(packet, model) if g["kind"] == "team" else "Fight-camp context (layoff, weight cut, short notice) is unavailable."
     if model and decision.get("model_prob") is not None:
         sel = _name(packet, decision["selection"])
-        sec["projection"] = (f"Model: {home} {pct(model['p_home'])}, {away} {pct(model['p_away'])}, anchored to the market. "
-                             f"Best side {sel}: model {pct(decision['model_prob'])} vs market {pct(decision['market_prob'])}, "
+        if model["rated"]:
+            head = (f"Ratings alone give {home} {pct(model['rating_home'])}. The model weights the rating at {model['shrink'] * 100:.0f}% "
+                    f"and the market at the rest, giving {home} {pct(model['p_home'])}. ")
+        else:
+            head = "The team rating is unavailable, so the model equals the market. "
+        sec["projection"] = (head + f"Side with the most value, {sel}: model {pct(decision['model_prob'])} vs market {pct(decision['market_prob'])}, "
                              f"edge {decision['edge'] * 100:.1f}%, fair price {decision['fair_odds']:+d} vs quoted {decision['odds']:+.0f}.")
     else:
         sec["projection"] = "No projection: the model needs a market line to anchor to."
     missing = [u["label"] for u in packet["unavailable"]]
-    sec["risk"] = ("Biggest risk: " + ("unavailable inputs (" + ", ".join(missing) + ") could hide news the price already reflects."
-                                       if missing else "late lineup news can move the line after publication."))
+    risk = UNKNOWN.get(g["sport"], "")
+    if missing and g["kind"] == "team":
+        risk += (" " if risk else "") + "Missing inputs: " + ", ".join(missing) + "."
+    sec["risk"] = risk or "Late news can move the line after publication."
     if decision["verdict"] == "PLAY":
         sel = _name(packet, decision["selection"])
         headline = f"PLAY: {sel} moneyline {decision['odds']:+.0f}"
@@ -68,11 +117,44 @@ def template(packet, model, decision):
                   f"Quoted {decision['odds']:+.0f} beats the fair price of {decision['fair_odds']:+d}.",
                   f"Coverage {pct(decision['coverage'])} of critical inputs."]
     else:
-        headline = "PASS / NO BET"
-        thesis = [decision["reason"] or "No edge.",
-                  f"Coverage {pct(decision['coverage'])} of critical inputs.",
-                  "No bet is recorded for this game."]
+        headline = "Pass"
+        if decision.get("selection") and decision.get("edge") is not None:
+            lean = _name(packet, decision["selection"])
+            first = (f"Leans {lean}: model {pct(decision['model_prob'])} vs market {pct(decision['market_prob'])}, "
+                     f"edge {decision['edge'] * 100:.1f}% against a {decision['min_edge'] * 100:.1f}% minimum.")
+        else:
+            first = decision["reason"] or "No edge."
+        second = (f"Ratings alone give {home} {pct(model['rating_home'])}; the no-vig market gives {home} {pct(model['market_home'])}."
+                  if model and model.get("rated") and decision.get("edge") is not None and not (decision["reason"] or "").startswith("Coverage")
+                  else decision["reason"] or "No edge.")
+        cov_reason = (decision["reason"] or "").startswith("Coverage")
+        thesis = [first, second, "No bet is recorded for this game." if cov_reason else f"Coverage {pct(decision['coverage'])} of critical inputs, and no bet is recorded."]
     return {**sec, "headline": headline, "thesis": thesis}
+
+
+def signals(packet, model):
+    """Up to three short facts that explain a row at a glance. Only facts present in the packet."""
+    g, inp = packet["game"], packet["inputs"]
+    home, away = g["home"], g["away"]
+    out = []
+    rat = inp["ratings"]["value"]
+    if rat and rat["elo_gap"] >= 40:
+        out.append(f"{home if rat['home_elo'] >= rat['away_elo'] else away} rated higher by {rat['elo_gap']}")
+    sr = inp["schedule_rest"]["value"]
+    if sr and sr["home_back_to_back"] != sr["away_back_to_back"]:
+        out.append(f"{home if sr['home_back_to_back'] else away} on a back-to-back")
+    inj = inp["injuries"]["value"]
+    if inj:
+        n_home, n_away = len(inj["home"]), len(inj["away"])
+        if max(n_home, n_away):
+            out.append(f"{home if n_home >= n_away else away}: {max(n_home, n_away)} out or doubtful")
+    rf = inp["recent_form"]["value"]
+    if rf and rf["home"]["games"] >= 3 and rf["away"]["games"] >= 3:
+        hr, ar = rf["home"]["w"] / rf["home"]["games"], rf["away"]["w"] / rf["away"]["games"]
+        if abs(hr - ar) >= 0.4:
+            t = rf["home"] if hr > ar else rf["away"]
+            out.append(f"{home if hr > ar else away} {t['w']}-{t['l']} in its last {t['games']}")
+    return out[:3]
 
 
 def validate_all(narr, packet, model, decision):

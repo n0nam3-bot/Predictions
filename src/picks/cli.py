@@ -1,6 +1,6 @@
 """python -m picks.cli <command>   (set PYTHONPATH=src)
 
-migrate | schedule | tick | grade | ledger | verify | backfill | demo
+migrate | schedule | tick | grade | ledger | verify | backfill | backtest | demo
 --now ISO   simulate the clock (used by the 'simulate_now' workflow input)
 """
 import argparse
@@ -10,11 +10,17 @@ import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from . import config, ledger, llm, pipeline, store
+from . import backtest, config, ledger, llm, pipeline, status, store
 from .sources.espn import ESPNSource
 from .timing import iso, parse_utc
 
 ROOT = Path(__file__).resolve().parent.parent.parent
+
+
+def ledger_dir(env=None):
+    """Where the daily audit files live. Tests point PICKS_LEDGER_DIR somewhere private."""
+    env = os.environ if env is None else env
+    return Path(env.get("PICKS_LEDGER_DIR") or ROOT / "data" / "ledger")
 
 
 def summary(text):
@@ -24,14 +30,14 @@ def summary(text):
             fh.write(text + "\n")
 
 
-def run_ledger(st, cfg, now):
+def run_ledger(st, cfg, now, env=None):
     day = pipeline.et_day(now, cfg)
     written = []
     for d in (day - timedelta(days=1), day):
-        p = ledger.export_day(st, d, ROOT / "data" / "ledger", cfg["timezone"])
+        p = ledger.export_day(st, d, ledger_dir(env), cfg["timezone"])
         if p:
             written.append(p.name)
-    problems = ledger.verify_chain(st) + ledger.verify_against_ledger(st, ROOT / "data" / "ledger")
+    problems = ledger.verify_chain(st) + ledger.verify_against_ledger(st, ledger_dir(env))
     pipeline.put_snapshot(st, "ledger_check", {"ok": not problems, "checked_utc": iso(now), "problems": problems[:20]}, now)
     return {"written": written, "problems": problems}
 
@@ -54,9 +60,10 @@ def housekeeping(st, source, cfg, now):
 
 def main(argv=None, source=None, env=None):
     ap = argparse.ArgumentParser(prog="picks", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("cmd", choices=["migrate", "schedule", "tick", "grade", "ledger", "verify", "backfill", "demo"])
+    ap.add_argument("cmd", choices=["migrate", "schedule", "tick", "grade", "ledger", "verify", "backfill", "backtest", "demo"])
     ap.add_argument("--now", default="")
-    ap.add_argument("--days", type=int, default=45)
+    ap.add_argument("--days", type=int, default=240)
+    ap.add_argument("--budget", type=int, default=10, help="backfill time budget in minutes")
     ap.add_argument("--out", default=str(ROOT / "site" / "demo" / "latest.json"))
     args = ap.parse_args(argv)
     cfg = config.load()
@@ -91,14 +98,24 @@ def main(argv=None, source=None, env=None):
             ran.append("grade")
         out["also_ran"] = ran
     elif args.cmd == "backfill":
-        out = pipeline.run_backfill(st, source, cfg, now, args.days)
+        out = pipeline.run_backfill(st, source, cfg, now, args.days, args.budget)
+        out["backtest"] = backtest.run(st, cfg)
+        pipeline.put_snapshot(st, "backtest", out["backtest"], now)
+        pipeline.build_snapshots(st, cfg, now)
+    elif args.cmd == "backtest":
+        out = backtest.run(st, cfg)
+        pipeline.put_snapshot(st, "backtest", out, now)
+        pipeline.build_snapshots(st, cfg, now)
     elif args.cmd == "grade":
         out = pipeline.run_grade(st, source, cfg, now)
     elif args.cmd == "ledger":
-        out = run_ledger(st, cfg, now)
+        out = run_ledger(st, cfg, now, env)
     else:
-        problems = ledger.verify_chain(st) + ledger.verify_against_ledger(st, ROOT / "data" / "ledger")
+        problems = ledger.verify_chain(st) + ledger.verify_against_ledger(st, ledger_dir(env))
         out = {"problems": problems}
+    if args.cmd in ("tick", "schedule", "grade", "backfill", "backtest", "ledger"):
+        status.write(st, cfg, now, os.environ if env is None else env)
+        pipeline.build_snapshots(st, cfg, now)
     print(json.dumps(out))
     summary(f"`{args.cmd}` at {iso(now)}: `{json.dumps(out)}`")
     return 1 if out.get("problems") else 0

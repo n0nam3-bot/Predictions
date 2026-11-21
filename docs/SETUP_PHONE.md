@@ -56,7 +56,7 @@ Everything below works in your phone’s browser. After this, every change is a 
 
 ## D. First run
 
-11. Actions, Pipeline, Run workflow: **schedule** (loads games), then **backfill** (loads the past 45 days), then **tick**, then **audit**.
+11. Actions, Pipeline, Run workflow: **schedule** (loads games), then **backfill** (loads the past 240 days), then **tick**, then **audit**.
     The audit tests every free data feed from GitHub’s servers and lists what works. Read it before trusting any feed (see `docs/DATA_SOURCES.md`).
 12. Open the site. Until real injury data and a validated model exist, most games will correctly show **PASS**. That is the system refusing to guess.
 
@@ -64,7 +64,7 @@ Everything below works in your phone’s browser. After this, every change is a 
 
 13. **Odds.** Run the `audit` task and open the **ESPN scoreboard** rows. The Notes column ends with “N with moneyline”. If N is above zero for the sports in season, the odds come free from ESPN and you need nothing else.
     If it is zero, get a free key at the-odds-api.com (no card, 500 credits a month) and add it as the secret `ODDS_API_KEY`. It is used only for games ESPN has no moneyline for, at most once per sport every 20 minutes, and never past 85% of the month.
-14. **History.** Run the `backfill` task (default 45 days). Rest, recent form and the date picker all read stored games; without this they only know the last week.
+14. **History.** Run the `backfill` task (default 240 days, takes a few minutes). Ratings, rest, recent form and the date picker all read stored games, and a team needs 8 stored games before it is rated. It also runs the **Rating check** shown on the Status panel.
 15. **Injuries.** The audit’s **ESPN injuries** rows must say rows greater than zero. If they fail, injuries stay unavailable and every game is a PASS (coverage cannot reach 80%).
 16. **Text.** An LLM key is optional. Without one, analysis text comes from the built-in template.
 17. **Then wait one slate.** Open the site, pick a past date with the date control, and check games against the real result. Do not trust a PLAY until the record has a few hundred graded plays.
@@ -74,6 +74,9 @@ Everything below works in your phone’s browser. After this, every change is a 
 GitHub's own schedule often skips runs on a new repo, and nothing gets posted when a tick misses its window. Follow `docs/RELIABLE_CLOCK.md` (free, about 5 minutes) to have cron-job.org start the tick every 5 minutes.
 
 ## If something breaks
+
+- **An upload “failed” or the site shows the old version:** open the repo’s **Issues** tab, the issue called **Inbox log**. The newest comment says why, and for a failed test it prints the last lines of the test output. You can also open Actions, **Inbox (apply zip uploads)**, the failed run, step **Apply zips**. Paste that text here and it can be fixed. The site’s Status panel shows the **Website version** and the updater’s version side by side: if they differ, one of them has not been upgraded.
+- **The `backfill` task was cancelled after 15 minutes:** older versions fetched one day at a time. The current one stops itself after about 10 minutes, remembers what it finished, and says “Run backfill again to continue.” Just run it again.
 
 - **Vercel says the build was canceled by the Ignored Build Step:** you have an older `vercel.json`. Upload `picks-board-v0.1.1-vercel-fix.zip`, then in Vercel open Deployments and Redeploy. From v0.1.1 the first deploy always builds, and later ones are skipped only when nothing under `site/` or `api/` changed since the last good deploy.
 - **Site shows old code after a zip:** Vercel Hobby blocks deploys whose commit author is not you. Inbox commits are authored as you, so check that the Vercel account uses the same GitHub login. The Inbox log issue says when a deploy was not confirmed.

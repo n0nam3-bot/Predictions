@@ -11,9 +11,9 @@ Visitors can step through any date with the date control: today updates live, pa
 
 Start here: [`docs/SETUP_PHONE.md`](docs/SETUP_PHONE.md). Rules and limits: [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md). Feeds: [`docs/DATA_SOURCES.md`](docs/DATA_SOURCES.md). Problems: [`docs/RUNBOOK.md`](docs/RUNBOOK.md).
 
-## Honest status (v0.1)
-Built and tested offline: zip inbox, store, hash-chained ledger, timing windows, grading rules, records, validator, baseline model, ESPN parsers (on synthetic fixtures), read-only API, site.
-Not done yet: real-feed verification (run the `audit` task), injury weighting, fighter data, spread and total picks, backtests. The baseline is unvalidated and will mostly PASS. The site labels it Experimental.
+## Honest status (v0.3)
+Working: zip inbox, store, hash-chained ledger, timing windows, grading, records, validator, Elo rating model from stored scores, injury filtering, ESPN parsers, odds fallback, read-only API, date picker, site.
+Not done: starting goalies and pitchers, lineups, player-level injury impact, travel, fighter data, spread and total picks, validation against closing lines. Run `backfill` first: ratings, rest and form all need stored games. The model is experimental and mostly passes by design.
 
 ## Develop
 ```

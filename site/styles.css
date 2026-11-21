@@ -65,6 +65,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 main { margin-top: var(--s5); }
 .group + .group { margin-top: var(--s6); }
 .group h2 { font-size: var(--t-s); font-weight: 600; color: var(--muted); margin-bottom: var(--s1); }
+.group h2 .note { font-weight: 400; margin-left: var(--s2); }
 .enter { animation: enter 180ms var(--ease); }
 @keyframes enter { from { opacity: 0; transform: translateY(4px); } }
 
@@ -81,6 +82,7 @@ main { margin-top: var(--s5); }
 .out { text-align: right; padding-top: 2px; min-width: 3.5rem; }
 .out .big { display: block; font-weight: 700; font-size: var(--t-l); line-height: 1.25; }
 .out .sub { display: block; color: var(--muted); font-size: var(--t-xs); }
+.out .big.q { font-size: var(--t-m); font-weight: 600; color: var(--muted); }
 .w { color: var(--pos); } .l { color: var(--neg); } .v { color: var(--muted); }
 .top { color: var(--accent); font-weight: 600; }
 .quiet .row-btn { padding: var(--s2) 0; }
@@ -106,9 +108,17 @@ main { margin-top: var(--s5); }
 .retry { color: var(--accent); font-weight: 600; margin-left: var(--s2); }
 
 .status { margin-top: var(--s6); font-size: var(--t-s); }
-.status h2 { font-size: var(--t-m); margin-bottom: var(--s3); }
-.status dl { margin: 0; display: grid; grid-template-columns: 9rem 1fr; gap: var(--s2) var(--s3); }
-.status dt { color: var(--muted); } .status dd { margin: 0; }
+.status > h2 { font-size: var(--t-l); margin-bottom: var(--s4); }
+.st-group + .st-group { margin-top: var(--s5); }
+.st-group h3 { margin: 0 0 var(--s2); font-size: var(--t-s); font-weight: 600; color: var(--muted); }
+.st-row { display: grid; grid-template-columns: 12px 1fr; column-gap: var(--s3); padding: var(--s2) 0; }
+.st-detail { display: block; color: var(--muted); margin-top: 2px; text-wrap: pretty; }
+.dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 7px; background: var(--muted); }
+.dot.ok { background: var(--pos); } .dot.bad { background: var(--neg); } .dot.warn { background: var(--accent); }
+.dot.info { background: var(--line); }
+.dot.off, .dot.idle { background: transparent; box-shadow: inset 0 0 0 2px var(--muted); }
+.tag { font-size: var(--t-xs); font-weight: 600; margin-left: var(--s1); }
+.tag.ok { color: var(--pos); } .tag.bad { color: var(--neg); } .tag.warn { color: var(--accent); } .tag.off, .tag.idle { color: var(--muted); }
 .bad { color: var(--neg); font-weight: 600; } .ok { color: var(--pos); font-weight: 600; }
 
 footer { margin-top: var(--s7); color: var(--muted); font-size: var(--t-xs); }

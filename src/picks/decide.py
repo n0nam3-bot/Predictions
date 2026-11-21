@@ -7,10 +7,10 @@ def decide(packet, model, coverage, cfg):
     mk = packet["inputs"]["market"]["value"]
     base = {"verdict": "PASS", "market": None, "selection": None, "line": None, "odds": None, "fair_odds": None,
             "model_prob": None, "market_prob": None, "edge": None, "units": None, "confidence": None,
-            "rank_score": None, "reason": None}
+            "rank_score": None, "reason": None, "min_edge": th["play_min_edge"]}
     if model is None or mk is None:
         return {**base, "reason": "No usable market line, so there is nothing to price against."}
-    side = "home" if model["p_home"] >= model["p_away"] else "away"
+    side = "home" if model["p_home"] - mk["no_vig_home"] >= model["p_away"] - mk["no_vig_away"] else "away"   # the side with value
     p = model["p_home"] if side == "home" else model["p_away"]
     p_mkt = mk["no_vig_home"] if side == "home" else mk["no_vig_away"]
     odds = mk["home_ml"] if side == "home" else mk["away_ml"]

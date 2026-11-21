@@ -2,7 +2,7 @@
  "schema": 1,
  "source": "demo",
  "date_range": {
-  "min": "2026-10-25",
+  "min": "2026-10-10",
   "max": "2026-11-16"
  },
  "generated_utc": "2026-11-16T03:45:00Z",
@@ -15,6 +15,10 @@
   "ufc",
   "dwcs"
  ],
+ "thresholds": {
+  "play_min_edge": 0.025,
+  "play_min_coverage": 0.85
+ },
  "records": {
   "today": {
    "w": 3,
@@ -22,8 +26,8 @@
    "v": 1,
    "pending": 1,
    "win_pct": 75.0,
-   "units": 4.84,
-   "roi": 40.3
+   "units": 3.33,
+   "roi": 27.8
   },
   "overall": {
    "w": 31,
@@ -31,17 +35,17 @@
    "v": 8,
    "pending": 1,
    "win_pct": 60.8,
-   "units": 11.29,
-   "roi": 15.7
+   "units": 9.79,
+   "roi": 13.6
   },
   "top_picks": {
    "w": 10,
    "l": 5,
-   "v": 1,
-   "pending": 1,
+   "v": 2,
+   "pending": 0,
    "win_pct": 66.7,
-   "units": 8.02,
-   "roi": 27.6
+   "units": 6.52,
+   "roi": 22.5
   },
   "by_sport": {
    "nfl": {
@@ -50,8 +54,8 @@
     "v": 1,
     "pending": 0,
     "win_pct": 53.8,
-    "units": 1.43,
-    "roi": 6.5
+    "units": 0.16,
+    "roi": 0.7
    },
    "nba": {
     "w": 12,
@@ -59,8 +63,8 @@
     "v": 2,
     "pending": 1,
     "win_pct": 70.6,
-    "units": 8.16,
-    "roi": 37.1
+    "units": 6.63,
+    "roi": 30.1
    },
    "nhl": {
     "w": 12,
@@ -68,8 +72,8 @@
     "v": 5,
     "pending": 0,
     "win_pct": 57.1,
-    "units": 1.7,
-    "roi": 6.1
+    "units": 3.0,
+    "roi": 10.7
    }
   },
   "history": [
@@ -304,29 +308,29 @@
    "pick": {
     "verdict": "PLAY",
     "tag": "ON_TIME",
-    "headline": "PLAY: Summit Ravens moneyline -120",
+    "headline": "PLAY: Summit Ravens moneyline -243",
     "market": "ML",
     "selection": "home",
     "selection_name": "Summit Ravens",
-    "odds": -120.0,
-    "fair_odds": -142.0,
-    "model_prob": 0.5875,
-    "market_prob": 0.5217,
-    "edge": 0.0658,
+    "odds": -243.0,
+    "fair_odds": -298.0,
+    "model_prob": 0.7485,
+    "market_prob": 0.6815,
+    "edge": 0.067,
     "units": 3,
     "confidence": 8,
     "top_pick": true,
     "coverage": 1.0,
-    "published_utc": "2026-11-15T17:25:00Z",
+    "published_utc": "2026-11-15T17:30:00Z",
     "narrative": {
-     "context": "Home rest 7.2 days vs away 5.2 days. Last five: home 3-0, away 1-2. Summit Ravens has no listed injuries. Delta Pilots injury list: Joe Calder (Out).",
-     "market": "Moneyline: Summit Ravens -120, Delta Pilots +100 at Demo Book. No-vig chance: Summit Ravens 52.2%, Delta Pilots 47.8% (vig 4.5%).",
-     "matchup": "Team and fighter efficiency data (pace, shooting, striking, grappling) is unavailable in this build; only the market, rest and recent form are used.",
-     "projection": "Model: Summit Ravens 58.8%, Delta Pilots 41.2%, anchored to the market. Best side Summit Ravens: model 58.8% vs market 52.2%, edge 6.6%, fair price -142 vs quoted -120.",
-     "risk": "Biggest risk: late lineup news can move the line after publication.",
+     "context": "Schedule: Summit Ravens 6 days off, Delta Pilots 3 days off. Games in the last 7 days including this one: Summit Ravens 1, Delta Pilots 2. Recent form: Summit Ravens 4-1 over its last 5 (+11 points); Delta Pilots 1-4 over its last 5 (\u22128 points). Summit Ravens has nobody listed out or doubtful. Delta Pilots out or doubtful: Joe Calder (Out). The feed lists who is out, not how much each player matters, so the size of these absences is not measured.",
+     "market": "Moneyline: Summit Ravens -243, Delta Pilots +202 at Demo Book. No-vig chance: Summit Ravens 68.2%, Delta Pilots 31.9% (vig 4.0%).",
+     "matchup": "Elo ratings from 12 games for Summit Ravens and 12 for Delta Pilots: Summit Ravens 1560, Delta Pilots 1429 (Summit Ravens rates stronger by 131). With a home edge of 48 rating points that is 73.7% for Summit Ravens. Average margin: Summit Ravens +0.92 points per game (7-5), Delta Pilots \u22120.75 (5-7).",
+     "projection": "Ratings alone give Summit Ravens 74.9%. The model weights the rating at 100% and the market at the rest, giving Summit Ravens 74.9%. Side with the most value, Summit Ravens: model 74.9% vs market 68.2%, edge 6.7%, fair price -298 vs quoted -243.",
+     "risk": "Quarterback status and weather are not factored in.",
      "thesis": [
-      "Model 58.8% vs no-vig market 52.2%: edge 6.6%.",
-      "Quoted -120 beats the fair price of -142.",
+      "Model 74.9% vs no-vig market 68.2%: edge 6.7%.",
+      "Quoted -243 beats the fair price of -298.",
       "Coverage 100.0% of critical inputs."
      ]
     },
@@ -335,37 +339,49 @@
     "inputs": {
      "injuries": {
       "available": true,
-      "fetched_at": "2026-11-15T17:25:00Z",
+      "fetched_at": "2026-11-15T17:30:00Z",
       "reason": null,
       "source": "espn injuries"
      },
      "market": {
       "available": true,
-      "fetched_at": "2026-11-15T17:25:00Z",
+      "fetched_at": "2026-11-15T17:30:00Z",
       "reason": null,
       "source": "demo"
      },
+     "ratings": {
+      "available": true,
+      "fetched_at": "2026-11-15T17:30:00Z",
+      "reason": null,
+      "source": "stored final scores"
+     },
      "recent_form": {
       "available": true,
-      "fetched_at": "2026-11-15T17:25:00Z",
+      "fetched_at": "2026-11-15T17:30:00Z",
       "reason": null,
-      "source": "schedule history"
+      "source": "stored final scores"
      },
      "schedule_rest": {
       "available": true,
-      "fetched_at": "2026-11-15T17:25:00Z",
+      "fetched_at": "2026-11-15T17:30:00Z",
       "reason": null,
-      "source": "schedule history"
+      "source": "stored schedule"
      }
     },
     "narrative_source": "template",
-    "hash": "e08f9effd1b0"
+    "lean_name": "Summit Ravens",
+    "signals": [
+     "Summit Ravens rated higher by 131",
+     "Delta Pilots: 1 out or doubtful",
+     "Summit Ravens 4-1 in its last 5"
+    ],
+    "hash": "f7a73a22595c"
    },
    "grade": {
     "grade": "W",
     "reason": "home won",
-    "profit_units": 2.5,
-    "closing_odds": -120.0,
+    "profit_units": 1.2346,
+    "closing_odds": -243.0,
     "clv": 0.0
    },
    "missed": false
@@ -387,29 +403,29 @@
    "pick": {
     "verdict": "PLAY",
     "tag": "ON_TIME",
-    "headline": "PLAY: Cobalt Falcons moneyline -125",
+    "headline": "PLAY: Cobalt Falcons moneyline +106",
     "market": "ML",
     "selection": "home",
     "selection_name": "Cobalt Falcons",
-    "odds": -125.0,
-    "fair_odds": -157.0,
-    "model_prob": 0.6107,
-    "market_prob": 0.5325,
-    "edge": 0.0782,
+    "odds": 106.0,
+    "fair_odds": -118.0,
+    "model_prob": 0.541,
+    "market_prob": 0.4672,
+    "edge": 0.0738,
     "units": 3,
-    "confidence": 10,
+    "confidence": 9,
     "top_pick": true,
     "coverage": 1.0,
-    "published_utc": "2026-11-15T20:50:00Z",
+    "published_utc": "2026-11-15T20:55:00Z",
     "narrative": {
-     "context": "Home rest 6.4 days vs away 4.4 days. Last five: home 3-0, away 0-3. Cobalt Falcons has no listed injuries. Maple Wolves has no listed injuries.",
-     "market": "Moneyline: Cobalt Falcons -125, Maple Wolves +105 at Demo Book. No-vig chance: Cobalt Falcons 53.2%, Maple Wolves 46.8% (vig 4.3%).",
-     "matchup": "Team and fighter efficiency data (pace, shooting, striking, grappling) is unavailable in this build; only the market, rest and recent form are used.",
-     "projection": "Model: Cobalt Falcons 61.1%, Maple Wolves 38.9%, anchored to the market. Best side Cobalt Falcons: model 61.1% vs market 53.2%, edge 7.8%, fair price -157 vs quoted -125.",
-     "risk": "Biggest risk: late lineup news can move the line after publication.",
+     "context": "Schedule: Cobalt Falcons 6 days off, Maple Wolves 6 days off. Games in the last 7 days including this one: Cobalt Falcons 1, Maple Wolves 1. Recent form: Cobalt Falcons 4-1 over its last 5 (+10 points); Maple Wolves 3-2 over its last 5 (+9 points). Cobalt Falcons has nobody listed out or doubtful. Maple Wolves has nobody listed out or doubtful. The feed lists who is out, not how much each player matters, so the size of these absences is not measured.",
+     "market": "Moneyline: Cobalt Falcons +106, Maple Wolves -124 at Demo Book. No-vig chance: Cobalt Falcons 46.7%, Maple Wolves 53.3% (vig 3.9%).",
+     "matchup": "Elo ratings from 12 games for Cobalt Falcons and 12 for Maple Wolves: Cobalt Falcons 1557, Maple Wolves 1576 (Maple Wolves rates stronger by 19). With a home edge of 48 rating points that is 54.1% for Cobalt Falcons. Average margin: Cobalt Falcons +0.83 points per game (7-5), Maple Wolves +1.42 (8-4).",
+     "projection": "Ratings alone give Cobalt Falcons 54.1%. The model weights the rating at 100% and the market at the rest, giving Cobalt Falcons 54.1%. Side with the most value, Cobalt Falcons: model 54.1% vs market 46.7%, edge 7.4%, fair price -118 vs quoted +106.",
+     "risk": "Quarterback status and weather are not factored in.",
      "thesis": [
-      "Model 61.1% vs no-vig market 53.2%: edge 7.8%.",
-      "Quoted -125 beats the fair price of -157.",
+      "Model 54.1% vs no-vig market 46.7%: edge 7.4%.",
+      "Quoted +106 beats the fair price of -118.",
       "Coverage 100.0% of critical inputs."
      ]
     },
@@ -418,37 +434,45 @@
     "inputs": {
      "injuries": {
       "available": true,
-      "fetched_at": "2026-11-15T20:50:00Z",
+      "fetched_at": "2026-11-15T20:55:00Z",
       "reason": null,
       "source": "espn injuries"
      },
      "market": {
       "available": true,
-      "fetched_at": "2026-11-15T20:50:00Z",
+      "fetched_at": "2026-11-15T20:55:00Z",
       "reason": null,
       "source": "demo"
      },
+     "ratings": {
+      "available": true,
+      "fetched_at": "2026-11-15T20:55:00Z",
+      "reason": null,
+      "source": "stored final scores"
+     },
      "recent_form": {
       "available": true,
-      "fetched_at": "2026-11-15T20:50:00Z",
+      "fetched_at": "2026-11-15T20:55:00Z",
       "reason": null,
-      "source": "schedule history"
+      "source": "stored final scores"
      },
      "schedule_rest": {
       "available": true,
-      "fetched_at": "2026-11-15T20:50:00Z",
+      "fetched_at": "2026-11-15T20:55:00Z",
       "reason": null,
-      "source": "schedule history"
+      "source": "stored schedule"
      }
     },
     "narrative_source": "template",
-    "hash": "1285862d8f81"
+    "lean_name": "Cobalt Falcons",
+    "signals": [],
+    "hash": "34355184fbd8"
    },
    "grade": {
     "grade": "L",
     "reason": "away won",
     "profit_units": -3.0,
-    "closing_odds": -125.0,
+    "closing_odds": 106.0,
     "clv": 0.0
    },
    "missed": false
@@ -470,29 +494,29 @@
    "pick": {
     "verdict": "PLAY",
     "tag": "ON_TIME",
-    "headline": "PLAY: Iron Coast Skaters moneyline -115",
+    "headline": "PLAY: Iron Coast Skaters moneyline +130",
     "market": "ML",
     "selection": "home",
     "selection_name": "Iron Coast Skaters",
-    "odds": -115.0,
-    "fair_odds": -141.0,
-    "model_prob": 0.5859,
-    "market_prob": 0.5108,
-    "edge": 0.0751,
+    "odds": 130.0,
+    "fair_odds": 106.0,
+    "model_prob": 0.4844,
+    "market_prob": 0.4176,
+    "edge": 0.0668,
     "units": 3,
-    "confidence": 9,
+    "confidence": 8,
     "top_pick": true,
     "coverage": 1.0,
-    "published_utc": "2026-11-15T22:25:00Z",
+    "published_utc": "2026-11-15T22:30:00Z",
     "narrative": {
-     "context": "Home rest 3.5 days vs away 1.7 days. Last five: home 3-0, away 0-3. Iron Coast Skaters has no listed injuries. Northgate Owls injury list: Piotr Nyl (Out).",
-     "market": "Moneyline: Iron Coast Skaters -115, Northgate Owls -105 at Demo Book. No-vig chance: Iron Coast Skaters 51.1%, Northgate Owls 48.9% (vig 4.7%).",
-     "matchup": "Team and fighter efficiency data (pace, shooting, striking, grappling) is unavailable in this build; only the market, rest and recent form are used.",
-     "projection": "Model: Iron Coast Skaters 58.6%, Northgate Owls 41.4%, anchored to the market. Best side Iron Coast Skaters: model 58.6% vs market 51.1%, edge 7.5%, fair price -141 vs quoted -115.",
-     "risk": "Biggest risk: late lineup news can move the line after publication.",
+     "context": "Schedule: Iron Coast Skaters 2 days off, Northgate Owls back-to-back. Games in the last 7 days including this one: Iron Coast Skaters 3, Northgate Owls 3. Recent form: Iron Coast Skaters 4-1 over its last 5 (+6 goals); Northgate Owls 5-0 over its last 5 (+8 goals). Iron Coast Skaters has nobody listed out or doubtful. Northgate Owls out or doubtful: Piotr Nyl (Out). The feed lists who is out, not how much each player matters, so the size of these absences is not measured.",
+     "market": "Moneyline: Iron Coast Skaters +130, Northgate Owls -154 at Demo Book. No-vig chance: Iron Coast Skaters 41.8%, Northgate Owls 58.2% (vig 4.1%).",
+     "matchup": "Elo ratings from 12 games for Iron Coast Skaters and 12 for Northgate Owls: Iron Coast Skaters 1483, Northgate Owls 1545 (Northgate Owls rates stronger by 61). With a home edge of 35 rating points that is 46.2% for Iron Coast Skaters. Average margin: Iron Coast Skaters \u22120.25 goals per game (4-8), Northgate Owls +0.92 (9-3).",
+     "projection": "Ratings alone give Iron Coast Skaters 48.4%. The model weights the rating at 100% and the market at the rest, giving Iron Coast Skaters 48.4%. Side with the most value, Iron Coast Skaters: model 48.4% vs market 41.8%, edge 6.7%, fair price +106 vs quoted +130.",
+     "risk": "The starting goalies are not in this data, and goaltending is the biggest swing factor in hockey.",
      "thesis": [
-      "Model 58.6% vs no-vig market 51.1%: edge 7.5%.",
-      "Quoted -115 beats the fair price of -141.",
+      "Model 48.4% vs no-vig market 41.8%: edge 6.7%.",
+      "Quoted +130 beats the fair price of +106.",
       "Coverage 100.0% of critical inputs."
      ]
     },
@@ -501,37 +525,49 @@
     "inputs": {
      "injuries": {
       "available": true,
-      "fetched_at": "2026-11-15T22:25:00Z",
+      "fetched_at": "2026-11-15T22:30:00Z",
       "reason": null,
       "source": "espn injuries"
      },
      "market": {
       "available": true,
-      "fetched_at": "2026-11-15T22:25:00Z",
+      "fetched_at": "2026-11-15T22:30:00Z",
       "reason": null,
       "source": "demo"
      },
+     "ratings": {
+      "available": true,
+      "fetched_at": "2026-11-15T22:30:00Z",
+      "reason": null,
+      "source": "stored final scores"
+     },
      "recent_form": {
       "available": true,
-      "fetched_at": "2026-11-15T22:25:00Z",
+      "fetched_at": "2026-11-15T22:30:00Z",
       "reason": null,
-      "source": "schedule history"
+      "source": "stored final scores"
      },
      "schedule_rest": {
       "available": true,
-      "fetched_at": "2026-11-15T22:25:00Z",
+      "fetched_at": "2026-11-15T22:30:00Z",
       "reason": null,
-      "source": "schedule history"
+      "source": "stored schedule"
      }
     },
     "narrative_source": "template",
-    "hash": "4ef7731ef900"
+    "lean_name": "Iron Coast Skaters",
+    "signals": [
+     "Northgate Owls rated higher by 61",
+     "Northgate Owls on a back-to-back",
+     "Northgate Owls: 1 out or doubtful"
+    ],
+    "hash": "50d7d2d26b69"
    },
    "grade": {
     "grade": "W",
     "reason": "home won",
-    "profit_units": 2.6087,
-    "closing_odds": -115.0,
+    "profit_units": 3.9,
+    "closing_odds": 130.0,
     "clv": 0.0
    },
    "missed": false
@@ -553,29 +589,29 @@
    "pick": {
     "verdict": "PLAY",
     "tag": "ON_TIME",
-    "headline": "PLAY: Harbor City Anglers moneyline -110",
+    "headline": "PLAY: Harbor City Anglers moneyline -250",
     "market": "ML",
     "selection": "home",
     "selection_name": "Harbor City Anglers",
-    "odds": -110.0,
-    "fair_odds": -124.0,
-    "model_prob": 0.5531,
-    "market_prob": 0.5,
-    "edge": 0.0531,
+    "odds": -250.0,
+    "fair_odds": -298.0,
+    "model_prob": 0.7489,
+    "market_prob": 0.6868,
+    "edge": 0.0621,
     "units": 3,
-    "confidence": 7,
+    "confidence": 8,
     "top_pick": true,
     "coverage": 1.0,
-    "published_utc": "2026-11-15T22:55:00Z",
+    "published_utc": "2026-11-15T23:00:00Z",
     "narrative": {
-     "context": "Home rest 3.5 days vs away 1.5 days. Last five: home 2-1, away 1-2. Harbor City Anglers has no listed injuries. Lakeview Herons injury list: Sam Rook (Out).",
-     "market": "Moneyline: Harbor City Anglers -110, Lakeview Herons -110 at Demo Book. No-vig chance: Harbor City Anglers 50.0%, Lakeview Herons 50.0% (vig 4.8%).",
-     "matchup": "Team and fighter efficiency data (pace, shooting, striking, grappling) is unavailable in this build; only the market, rest and recent form are used.",
-     "projection": "Model: Harbor City Anglers 55.3%, Lakeview Herons 44.7%, anchored to the market. Best side Harbor City Anglers: model 55.3% vs market 50.0%, edge 5.3%, fair price -124 vs quoted -110.",
-     "risk": "Biggest risk: late lineup news can move the line after publication.",
+     "context": "Schedule: Harbor City Anglers 2 days off, Lakeview Herons back-to-back. Games in the last 7 days including this one: Harbor City Anglers 3, Lakeview Herons 3. Recent form: Harbor City Anglers 3-2 over its last 5 (+4 points); Lakeview Herons 2-3 over its last 5 (\u221212 points). Harbor City Anglers has nobody listed out or doubtful. Lakeview Herons out or doubtful: Sam Rook (Out). The feed lists who is out, not how much each player matters, so the size of these absences is not measured.",
+     "market": "Moneyline: Harbor City Anglers -250, Lakeview Herons +207 at Demo Book. No-vig chance: Harbor City Anglers 68.7%, Lakeview Herons 31.3% (vig 4.0%).",
+     "matchup": "Elo ratings from 12 games for Harbor City Anglers and 12 for Lakeview Herons: Harbor City Anglers 1511, Lakeview Herons 1406 (Harbor City Anglers rates stronger by 104). With a home edge of 70 rating points that is 73.2% for Harbor City Anglers. Average margin: Harbor City Anglers +0.17 points per game (6-6), Lakeview Herons \u22122.25 (4-8).",
+     "projection": "Ratings alone give Harbor City Anglers 74.9%. The model weights the rating at 100% and the market at the rest, giving Harbor City Anglers 74.9%. Side with the most value, Harbor City Anglers: model 74.9% vs market 68.7%, edge 6.2%, fair price -298 vs quoted -250.",
+     "risk": "Late scratches and rotation changes are not captured, and they can move an NBA line quickly.",
      "thesis": [
-      "Model 55.3% vs no-vig market 50.0%: edge 5.3%.",
-      "Quoted -110 beats the fair price of -124.",
+      "Model 74.9% vs no-vig market 68.7%: edge 6.2%.",
+      "Quoted -250 beats the fair price of -298.",
       "Coverage 100.0% of critical inputs."
      ]
     },
@@ -584,37 +620,49 @@
     "inputs": {
      "injuries": {
       "available": true,
-      "fetched_at": "2026-11-15T22:55:00Z",
+      "fetched_at": "2026-11-15T23:00:00Z",
       "reason": null,
       "source": "espn injuries"
      },
      "market": {
       "available": true,
-      "fetched_at": "2026-11-15T22:55:00Z",
+      "fetched_at": "2026-11-15T23:00:00Z",
       "reason": null,
       "source": "demo"
      },
+     "ratings": {
+      "available": true,
+      "fetched_at": "2026-11-15T23:00:00Z",
+      "reason": null,
+      "source": "stored final scores"
+     },
      "recent_form": {
       "available": true,
-      "fetched_at": "2026-11-15T22:55:00Z",
+      "fetched_at": "2026-11-15T23:00:00Z",
       "reason": null,
-      "source": "schedule history"
+      "source": "stored final scores"
      },
      "schedule_rest": {
       "available": true,
-      "fetched_at": "2026-11-15T22:55:00Z",
+      "fetched_at": "2026-11-15T23:00:00Z",
       "reason": null,
-      "source": "schedule history"
+      "source": "stored schedule"
      }
     },
     "narrative_source": "template",
-    "hash": "5e8e6d173dc8"
+    "lean_name": "Harbor City Anglers",
+    "signals": [
+     "Harbor City Anglers rated higher by 104",
+     "Lakeview Herons on a back-to-back",
+     "Lakeview Herons: 1 out or doubtful"
+    ],
+    "hash": "ca54df2ff1dd"
    },
    "grade": {
     "grade": "W",
     "reason": "home won",
-    "profit_units": 2.7273,
-    "closing_odds": -110.0,
+    "profit_units": 1.2,
+    "closing_odds": -250.0,
     "clv": 0.0
    },
    "missed": false
@@ -636,29 +684,29 @@
    "pick": {
     "verdict": "PLAY",
     "tag": "ON_TIME",
-    "headline": "PLAY: Prairie Foxes moneyline -110",
+    "headline": "PLAY: Prairie Foxes moneyline -178",
     "market": "ML",
     "selection": "home",
     "selection_name": "Prairie Foxes",
-    "odds": -110.0,
-    "fair_odds": -114.0,
-    "model_prob": 0.5333,
-    "market_prob": 0.5,
-    "edge": 0.0333,
+    "odds": -178.0,
+    "fair_odds": -198.0,
+    "model_prob": 0.6648,
+    "market_prob": 0.6155,
+    "edge": 0.0493,
     "units": 2,
-    "confidence": 4,
-    "top_pick": false,
+    "confidence": 6,
+    "top_pick": true,
     "coverage": 1.0,
-    "published_utc": "2026-11-15T23:25:00Z",
+    "published_utc": "2026-11-15T23:30:00Z",
     "narrative": {
-     "context": "Home rest 2.5 days vs away 1.5 days. Last five: home 2-1, away 1-2. Prairie Foxes has no listed injuries. Glacier Kings has no listed injuries.",
-     "market": "Moneyline: Prairie Foxes -110, Glacier Kings -110 at Demo Book. No-vig chance: Prairie Foxes 50.0%, Glacier Kings 50.0% (vig 4.8%).",
-     "matchup": "Team and fighter efficiency data (pace, shooting, striking, grappling) is unavailable in this build; only the market, rest and recent form are used.",
-     "projection": "Model: Prairie Foxes 53.3%, Glacier Kings 46.7%, anchored to the market. Best side Prairie Foxes: model 53.3% vs market 50.0%, edge 3.3%, fair price -114 vs quoted -110.",
-     "risk": "Biggest risk: late lineup news can move the line after publication.",
+     "context": "Schedule: Prairie Foxes 2 days off, Glacier Kings back-to-back. Games in the last 7 days including this one: Prairie Foxes 3, Glacier Kings 3. Recent form: Prairie Foxes 3-2 over its last 5 (+1 goals); Glacier Kings 1-4 over its last 5 (\u22124 goals). Prairie Foxes has nobody listed out or doubtful. Glacier Kings has nobody listed out or doubtful. The feed lists who is out, not how much each player matters, so the size of these absences is not measured.",
+     "market": "Moneyline: Prairie Foxes -178, Glacier Kings +150 at Demo Book. No-vig chance: Prairie Foxes 61.6%, Glacier Kings 38.5% (vig 4.0%).",
+     "matchup": "Elo ratings from 12 games for Prairie Foxes and 12 for Glacier Kings: Prairie Foxes 1527, Glacier Kings 1459 (Prairie Foxes rates stronger by 68). With a home edge of 35 rating points that is 64.5% for Prairie Foxes. Average margin: Prairie Foxes +0.58 goals per game (8-4), Glacier Kings \u22120.83 (3-9).",
+     "projection": "Ratings alone give Prairie Foxes 66.5%. The model weights the rating at 100% and the market at the rest, giving Prairie Foxes 66.5%. Side with the most value, Prairie Foxes: model 66.5% vs market 61.6%, edge 4.9%, fair price -198 vs quoted -178.",
+     "risk": "The starting goalies are not in this data, and goaltending is the biggest swing factor in hockey.",
      "thesis": [
-      "Model 53.3% vs no-vig market 50.0%: edge 3.3%.",
-      "Quoted -110 beats the fair price of -114.",
+      "Model 66.5% vs no-vig market 61.6%: edge 4.9%.",
+      "Quoted -178 beats the fair price of -198.",
       "Coverage 100.0% of critical inputs."
      ]
     },
@@ -667,37 +715,48 @@
     "inputs": {
      "injuries": {
       "available": true,
-      "fetched_at": "2026-11-15T23:25:00Z",
+      "fetched_at": "2026-11-15T23:30:00Z",
       "reason": null,
       "source": "espn injuries"
      },
      "market": {
       "available": true,
-      "fetched_at": "2026-11-15T23:25:00Z",
+      "fetched_at": "2026-11-15T23:30:00Z",
       "reason": null,
       "source": "demo"
      },
+     "ratings": {
+      "available": true,
+      "fetched_at": "2026-11-15T23:30:00Z",
+      "reason": null,
+      "source": "stored final scores"
+     },
      "recent_form": {
       "available": true,
-      "fetched_at": "2026-11-15T23:25:00Z",
+      "fetched_at": "2026-11-15T23:30:00Z",
       "reason": null,
-      "source": "schedule history"
+      "source": "stored final scores"
      },
      "schedule_rest": {
       "available": true,
-      "fetched_at": "2026-11-15T23:25:00Z",
+      "fetched_at": "2026-11-15T23:30:00Z",
       "reason": null,
-      "source": "schedule history"
+      "source": "stored schedule"
      }
     },
     "narrative_source": "template",
-    "hash": "da478821db0d"
+    "lean_name": "Prairie Foxes",
+    "signals": [
+     "Prairie Foxes rated higher by 68",
+     "Glacier Kings on a back-to-back"
+    ],
+    "hash": "bdc6a13036d0"
    },
    "grade": {
     "grade": "V",
     "reason": "game cancelled",
     "profit_units": 0.0,
-    "closing_odds": -110.0,
+    "closing_odds": -178.0,
     "clv": 0.0
    },
    "missed": false
@@ -719,62 +778,72 @@
    "pick": {
     "verdict": "PASS",
     "tag": "ON_TIME",
-    "headline": "PASS / NO BET",
+    "headline": "Pass",
     "market": "ML",
     "selection": null,
     "selection_name": null,
     "odds": null,
-    "fair_odds": -104.0,
-    "model_prob": 0.5088,
-    "market_prob": 0.5108,
-    "edge": -0.002,
+    "fair_odds": -320.0,
+    "model_prob": 0.7617,
+    "market_prob": 0.7402,
+    "edge": 0.0215,
     "units": null,
     "confidence": null,
     "top_pick": false,
     "coverage": 1.0,
-    "published_utc": "2026-11-16T00:55:00Z",
+    "published_utc": "2026-11-16T01:00:00Z",
     "narrative": {
-     "context": "Home rest 2.6 days vs away 2.5 days. Last five: home 2-1, away 2-1. Ridge Bears has no listed injuries. Iron Coast Smiths has no listed injuries.",
-     "market": "Moneyline: Ridge Bears -105, Iron Coast Smiths -115 at Demo Book. No-vig chance: Ridge Bears 48.9%, Iron Coast Smiths 51.1% (vig 4.7%).",
-     "matchup": "Team and fighter efficiency data (pace, shooting, striking, grappling) is unavailable in this build; only the market, rest and recent form are used.",
-     "projection": "Model: Ridge Bears 49.1%, Iron Coast Smiths 50.9%, anchored to the market. Best side Iron Coast Smiths: model 50.9% vs market 51.1%, edge -0.2%, fair price -104 vs quoted -115.",
-     "risk": "Biggest risk: late lineup news can move the line after publication.",
+     "context": "Schedule: Ridge Bears 2 days off, Iron Coast Smiths 2 days off. Games in the last 7 days including this one: Ridge Bears 3, Iron Coast Smiths 3. Recent form: Ridge Bears 3-2 over its last 5 (+10 points); Iron Coast Smiths 2-3 over its last 5 (\u22126 points). Ridge Bears has nobody listed out or doubtful. Iron Coast Smiths has nobody listed out or doubtful. The feed lists who is out, not how much each player matters, so the size of these absences is not measured.",
+     "market": "Moneyline: Ridge Bears -335, Iron Coast Smiths +270 at Demo Book. No-vig chance: Ridge Bears 74.0%, Iron Coast Smiths 26.0% (vig 4.0%).",
+     "matchup": "Elo ratings from 12 games for Ridge Bears and 12 for Iron Coast Smiths: Ridge Bears 1571, Iron Coast Smiths 1439 (Ridge Bears rates stronger by 132). With a home edge of 70 rating points that is 76.2% for Ridge Bears. Average margin: Ridge Bears +1.83 points per game (7-5), Iron Coast Smiths \u22120.67 (4-8).",
+     "projection": "Ratings alone give Ridge Bears 76.2%. The model weights the rating at 100% and the market at the rest, giving Ridge Bears 76.2%. Side with the most value, Ridge Bears: model 76.2% vs market 74.0%, edge 2.1%, fair price -320 vs quoted -335.",
+     "risk": "Late scratches and rotation changes are not captured, and they can move an NBA line quickly.",
      "thesis": [
-      "Edge is -0.2%, under the 2.5% minimum.",
-      "Coverage 100.0% of critical inputs.",
-      "No bet is recorded for this game."
+      "Leans Ridge Bears: model 76.2% vs market 74.0%, edge 2.1% against a 2.5% minimum.",
+      "Ratings alone give Ridge Bears 76.2%; the no-vig market gives Ridge Bears 74.0%.",
+      "Coverage 100.0% of critical inputs, and no bet is recorded."
      ]
     },
-    "reason": "Edge is -0.2%, under the 2.5% minimum.",
+    "reason": "Edge is 2.2%, under the 2.5% minimum.",
     "unavailable": [],
     "inputs": {
      "injuries": {
       "available": true,
-      "fetched_at": "2026-11-16T00:55:00Z",
+      "fetched_at": "2026-11-16T01:00:00Z",
       "reason": null,
       "source": "espn injuries"
      },
      "market": {
       "available": true,
-      "fetched_at": "2026-11-16T00:55:00Z",
+      "fetched_at": "2026-11-16T01:00:00Z",
       "reason": null,
       "source": "demo"
      },
+     "ratings": {
+      "available": true,
+      "fetched_at": "2026-11-16T01:00:00Z",
+      "reason": null,
+      "source": "stored final scores"
+     },
      "recent_form": {
       "available": true,
-      "fetched_at": "2026-11-16T00:55:00Z",
+      "fetched_at": "2026-11-16T01:00:00Z",
       "reason": null,
-      "source": "schedule history"
+      "source": "stored final scores"
      },
      "schedule_rest": {
       "available": true,
-      "fetched_at": "2026-11-16T00:55:00Z",
+      "fetched_at": "2026-11-16T01:00:00Z",
       "reason": null,
-      "source": "schedule history"
+      "source": "stored schedule"
      }
     },
     "narrative_source": "template",
-    "hash": "102531059235"
+    "lean_name": "Ridge Bears",
+    "signals": [
+     "Ridge Bears rated higher by 132"
+    ],
+    "hash": "d8b17b073c22"
    },
    "grade": null,
    "missed": false
@@ -796,62 +865,74 @@
    "pick": {
     "verdict": "PASS",
     "tag": "ON_TIME",
-    "headline": "PASS / NO BET",
+    "headline": "Pass",
     "market": "ML",
     "selection": null,
     "selection_name": null,
     "odds": null,
-    "fair_odds": -110.0,
-    "model_prob": 0.5227,
-    "market_prob": 0.5,
-    "edge": 0.0227,
+    "fair_odds": -297.0,
+    "model_prob": 0.7482,
+    "market_prob": 0.7269,
+    "edge": 0.0213,
     "units": null,
     "confidence": null,
     "top_pick": false,
     "coverage": 1.0,
-    "published_utc": "2026-11-16T02:55:00Z",
+    "published_utc": "2026-11-16T03:00:00Z",
     "narrative": {
-     "context": "Home rest 2.2 days vs away 2.4 days. Last five: home 4-0, away 1-2. Westfield Foxes has no listed injuries. Pine Valley Rams injury list: Eli Marsh (Out).",
-     "market": "Moneyline: Westfield Foxes -110, Pine Valley Rams -110 at Demo Book. No-vig chance: Westfield Foxes 50.0%, Pine Valley Rams 50.0% (vig 4.8%).",
-     "matchup": "Team and fighter efficiency data (pace, shooting, striking, grappling) is unavailable in this build; only the market, rest and recent form are used.",
-     "projection": "Model: Westfield Foxes 52.3%, Pine Valley Rams 47.7%, anchored to the market. Best side Westfield Foxes: model 52.3% vs market 50.0%, edge 2.3%, fair price -110 vs quoted -110.",
-     "risk": "Biggest risk: late lineup news can move the line after publication.",
+     "context": "Schedule: Westfield Foxes 2 days off, Pine Valley Rams back-to-back. Games in the last 7 days including this one: Westfield Foxes 3, Pine Valley Rams 3. Recent form: Westfield Foxes 5-0 over its last 5 (+23 points); Pine Valley Rams 3-2 over its last 5 (+4 points). Westfield Foxes has nobody listed out or doubtful. Pine Valley Rams out or doubtful: Eli Marsh (Out). The feed lists who is out, not how much each player matters, so the size of these absences is not measured.",
+     "market": "Moneyline: Westfield Foxes -310, Pine Valley Rams +252 at Demo Book. No-vig chance: Westfield Foxes 72.7%, Pine Valley Rams 27.3% (vig 4.0%).",
+     "matchup": "Elo ratings from 12 games for Westfield Foxes and 12 for Pine Valley Rams: Westfield Foxes 1609, Pine Valley Rams 1506 (Westfield Foxes rates stronger by 104). With a home edge of 70 rating points that is 73.1% for Westfield Foxes. Average margin: Westfield Foxes +1.50 points per game (8-4), Pine Valley Rams \u22120.25 (6-6).",
+     "projection": "Ratings alone give Westfield Foxes 74.8%. The model weights the rating at 100% and the market at the rest, giving Westfield Foxes 74.8%. Side with the most value, Westfield Foxes: model 74.8% vs market 72.7%, edge 2.1%, fair price -297 vs quoted -310.",
+     "risk": "Late scratches and rotation changes are not captured, and they can move an NBA line quickly.",
      "thesis": [
-      "Edge is 2.3%, under the 2.5% minimum.",
-      "Coverage 100.0% of critical inputs.",
-      "No bet is recorded for this game."
+      "Leans Westfield Foxes: model 74.8% vs market 72.7%, edge 2.1% against a 2.5% minimum.",
+      "Ratings alone give Westfield Foxes 74.8%; the no-vig market gives Westfield Foxes 72.7%.",
+      "Coverage 100.0% of critical inputs, and no bet is recorded."
      ]
     },
-    "reason": "Edge is 2.3%, under the 2.5% minimum.",
+    "reason": "Edge is 2.1%, under the 2.5% minimum.",
     "unavailable": [],
     "inputs": {
      "injuries": {
       "available": true,
-      "fetched_at": "2026-11-16T02:55:00Z",
+      "fetched_at": "2026-11-16T03:00:00Z",
       "reason": null,
       "source": "espn injuries"
      },
      "market": {
       "available": true,
-      "fetched_at": "2026-11-16T02:55:00Z",
+      "fetched_at": "2026-11-16T03:00:00Z",
       "reason": null,
       "source": "demo"
      },
+     "ratings": {
+      "available": true,
+      "fetched_at": "2026-11-16T03:00:00Z",
+      "reason": null,
+      "source": "stored final scores"
+     },
      "recent_form": {
       "available": true,
-      "fetched_at": "2026-11-16T02:55:00Z",
+      "fetched_at": "2026-11-16T03:00:00Z",
       "reason": null,
-      "source": "schedule history"
+      "source": "stored final scores"
      },
      "schedule_rest": {
       "available": true,
-      "fetched_at": "2026-11-16T02:55:00Z",
+      "fetched_at": "2026-11-16T03:00:00Z",
       "reason": null,
-      "source": "schedule history"
+      "source": "stored schedule"
      }
     },
     "narrative_source": "template",
-    "hash": "437b83420ce1"
+    "lean_name": "Westfield Foxes",
+    "signals": [
+     "Westfield Foxes rated higher by 104",
+     "Pine Valley Rams on a back-to-back",
+     "Pine Valley Rams: 1 out or doubtful"
+    ],
+    "hash": "cc1747fe3f85"
    },
    "grade": null,
    "missed": false
@@ -873,29 +954,29 @@
    "pick": {
     "verdict": "PLAY",
     "tag": "LATE",
-    "headline": "PLAY: Capital Owls moneyline -150",
+    "headline": "PLAY: Sunset Lions moneyline -134",
     "market": "ML",
-    "selection": "home",
-    "selection_name": "Capital Owls",
-    "odds": -150.0,
-    "fair_odds": -169.0,
-    "model_prob": 0.6276,
-    "market_prob": 0.5798,
-    "edge": 0.0478,
-    "units": 2,
+    "selection": "away",
+    "selection_name": "Sunset Lions",
+    "odds": -134.0,
+    "fair_odds": -151.0,
+    "model_prob": 0.6023,
+    "market_prob": 0.5507,
+    "edge": 0.0516,
+    "units": 3,
     "confidence": 6,
-    "top_pick": true,
+    "top_pick": false,
     "coverage": 1.0,
     "published_utc": "2026-11-16T03:45:00Z",
     "narrative": {
-     "context": "Home rest 2.7 days vs away 2.2 days. Last five: home 3-0, away 0-3. Capital Owls has no listed injuries. Sunset Lions has no listed injuries.",
-     "market": "Moneyline: Capital Owls -150, Sunset Lions +130 at Demo Book. No-vig chance: Capital Owls 58.0%, Sunset Lions 42.0% (vig 3.5%).",
-     "matchup": "Team and fighter efficiency data (pace, shooting, striking, grappling) is unavailable in this build; only the market, rest and recent form are used.",
-     "projection": "Model: Capital Owls 62.8%, Sunset Lions 37.2%, anchored to the market. Best side Capital Owls: model 62.8% vs market 58.0%, edge 4.8%, fair price -169 vs quoted -150.",
-     "risk": "Biggest risk: late lineup news can move the line after publication.",
+     "context": "Schedule: Capital Owls 2 days off, Sunset Lions back-to-back. Games in the last 7 days including this one: Capital Owls 3, Sunset Lions 3. Recent form: Capital Owls 2-3 over its last 5 (0 points); Sunset Lions 4-1 over its last 5 (+9 points). Capital Owls has nobody listed out or doubtful. Sunset Lions has nobody listed out or doubtful. The feed lists who is out, not how much each player matters, so the size of these absences is not measured.",
+     "market": "Moneyline: Capital Owls +114, Sunset Lions -134 at Demo Book. No-vig chance: Capital Owls 44.9%, Sunset Lions 55.1% (vig 4.0%).",
+     "matchup": "Elo ratings from 12 games for Capital Owls and 12 for Sunset Lions: Capital Owls 1472, Sunset Lions 1630 (Sunset Lions rates stronger by 158). With a home edge of 70 rating points that is 37.6% for Capital Owls. Average margin: Capital Owls \u22120.08 points per game (5-7), Sunset Lions +2.75 (10-2).",
+     "projection": "Ratings alone give Capital Owls 39.8%. The model weights the rating at 100% and the market at the rest, giving Capital Owls 39.8%. Side with the most value, Sunset Lions: model 60.2% vs market 55.1%, edge 5.2%, fair price -151 vs quoted -134.",
+     "risk": "Late scratches and rotation changes are not captured, and they can move an NBA line quickly.",
      "thesis": [
-      "Model 62.8% vs no-vig market 58.0%: edge 4.8%.",
-      "Quoted -150 beats the fair price of -169.",
+      "Model 60.2% vs no-vig market 55.1%: edge 5.2%.",
+      "Quoted -134 beats the fair price of -151.",
       "Coverage 100.0% of critical inputs."
      ]
     },
@@ -914,21 +995,33 @@
       "reason": null,
       "source": "demo"
      },
+     "ratings": {
+      "available": true,
+      "fetched_at": "2026-11-16T03:45:00Z",
+      "reason": null,
+      "source": "stored final scores"
+     },
      "recent_form": {
       "available": true,
       "fetched_at": "2026-11-16T03:45:00Z",
       "reason": null,
-      "source": "schedule history"
+      "source": "stored final scores"
      },
      "schedule_rest": {
       "available": true,
       "fetched_at": "2026-11-16T03:45:00Z",
       "reason": null,
-      "source": "schedule history"
+      "source": "stored schedule"
      }
     },
     "narrative_source": "template",
-    "hash": "82802d126632"
+    "lean_name": "Sunset Lions",
+    "signals": [
+     "Sunset Lions rated higher by 158",
+     "Sunset Lions on a back-to-back",
+     "Sunset Lions 4-1 in its last 5"
+    ],
+    "hash": "7ba844c177c0"
    },
    "grade": null,
    "missed": false
@@ -950,7 +1043,7 @@
    "pick": {
     "verdict": "PASS",
     "tag": "ON_TIME",
-    "headline": "PASS / NO BET",
+    "headline": "Pass",
     "market": null,
     "selection": null,
     "selection_name": null,
@@ -965,20 +1058,21 @@
     "coverage": 0.0,
     "published_utc": "2026-11-16T02:25:00Z",
     "narrative": {
-     "context": "Rest and schedule is unavailable (fight-camp data (layoff, reach, finish rates) is not connected yet). Recent form is unavailable (fight-camp data (layoff, reach, finish rates) is not connected yet). Injury data is unavailable (injury feed not connected or empty).",
+     "context": "Fight-camp context (layoff, weight cut, short notice) is unavailable.",
      "market": "Market line is unavailable for this game, so nothing can be priced.",
-     "matchup": "Team and fighter efficiency data (pace, shooting, striking, grappling) is unavailable in this build; only the market, rest and recent form are used.",
+     "matchup": "Fighter statistics are not connected, so this bout has no matchup analysis.",
      "projection": "No projection: the model needs a market line to anchor to.",
-     "risk": "Biggest risk: unavailable inputs (betting market, rest and schedule, recent form, injuries) could hide news the price already reflects.",
+     "risk": "Fighter styles, reach, layoffs and weight cuts are not connected, so this bout has no real analysis.",
      "thesis": [
       "No usable market line, so there is nothing to price against.",
-      "Coverage 0.0% of critical inputs.",
-      "No bet is recorded for this game."
+      "No usable market line, so there is nothing to price against.",
+      "Coverage 0.0% of critical inputs, and no bet is recorded."
      ]
     },
     "reason": "No usable market line, so there is nothing to price against.",
     "unavailable": [
      "betting market",
+     "team ratings",
      "rest and schedule",
      "recent form",
      "injuries"
@@ -996,21 +1090,29 @@
       "reason": "no moneyline in the feed for this game",
       "source": "espn"
      },
+     "ratings": {
+      "available": false,
+      "fetched_at": "2026-11-16T02:25:00Z",
+      "reason": "fighter data (record, reach, layoff, finishing rates) is not connected yet",
+      "source": "none"
+     },
      "recent_form": {
       "available": false,
       "fetched_at": "2026-11-16T02:25:00Z",
-      "reason": "fight-camp data (layoff, reach, finish rates) is not connected yet",
+      "reason": "fighter data (record, reach, layoff, finishing rates) is not connected yet",
       "source": "none"
      },
      "schedule_rest": {
       "available": false,
       "fetched_at": "2026-11-16T02:25:00Z",
-      "reason": "fight-camp data (layoff, reach, finish rates) is not connected yet",
+      "reason": "fighter data (record, reach, layoff, finishing rates) is not connected yet",
       "source": "none"
      }
     },
     "narrative_source": "template",
-    "hash": "4553195d9771"
+    "lean_name": null,
+    "signals": [],
+    "hash": "496b2f6180fb"
    },
    "grade": null,
    "missed": false
@@ -1050,7 +1152,7 @@
    "pick": {
     "verdict": "PASS",
     "tag": "ON_TIME",
-    "headline": "PASS / NO BET",
+    "headline": "Pass",
     "market": null,
     "selection": null,
     "selection_name": null,
@@ -1065,20 +1167,21 @@
     "coverage": 0.0,
     "published_utc": "2026-11-16T02:25:00Z",
     "narrative": {
-     "context": "Rest and schedule is unavailable (fight-camp data (layoff, reach, finish rates) is not connected yet). Recent form is unavailable (fight-camp data (layoff, reach, finish rates) is not connected yet). Injury data is unavailable (injury feed not connected or empty).",
+     "context": "Fight-camp context (layoff, weight cut, short notice) is unavailable.",
      "market": "Market line is unavailable for this game, so nothing can be priced.",
-     "matchup": "Team and fighter efficiency data (pace, shooting, striking, grappling) is unavailable in this build; only the market, rest and recent form are used.",
+     "matchup": "Fighter statistics are not connected, so this bout has no matchup analysis.",
      "projection": "No projection: the model needs a market line to anchor to.",
-     "risk": "Biggest risk: unavailable inputs (betting market, rest and schedule, recent form, injuries) could hide news the price already reflects.",
+     "risk": "Fighter styles, reach, layoffs and weight cuts are not connected, so this bout has no real analysis.",
      "thesis": [
       "No usable market line, so there is nothing to price against.",
-      "Coverage 0.0% of critical inputs.",
-      "No bet is recorded for this game."
+      "No usable market line, so there is nothing to price against.",
+      "Coverage 0.0% of critical inputs, and no bet is recorded."
      ]
     },
     "reason": "No usable market line, so there is nothing to price against.",
     "unavailable": [
      "betting market",
+     "team ratings",
      "rest and schedule",
      "recent form",
      "injuries"
@@ -1096,21 +1199,29 @@
       "reason": "no moneyline in the feed for this game",
       "source": "espn"
      },
+     "ratings": {
+      "available": false,
+      "fetched_at": "2026-11-16T02:25:00Z",
+      "reason": "fighter data (record, reach, layoff, finishing rates) is not connected yet",
+      "source": "none"
+     },
      "recent_form": {
       "available": false,
       "fetched_at": "2026-11-16T02:25:00Z",
-      "reason": "fight-camp data (layoff, reach, finish rates) is not connected yet",
+      "reason": "fighter data (record, reach, layoff, finishing rates) is not connected yet",
       "source": "none"
      },
      "schedule_rest": {
       "available": false,
       "fetched_at": "2026-11-16T02:25:00Z",
-      "reason": "fight-camp data (layoff, reach, finish rates) is not connected yet",
+      "reason": "fighter data (record, reach, layoff, finishing rates) is not connected yet",
       "source": "none"
      }
     },
     "narrative_source": "template",
-    "hash": "4add62dd6560"
+    "lean_name": null,
+    "signals": [],
+    "hash": "de9bb2402b89"
    },
    "grade": null,
    "missed": false
@@ -1132,7 +1243,7 @@
    "pick": {
     "verdict": "PASS",
     "tag": "ON_TIME",
-    "headline": "PASS / NO BET",
+    "headline": "Pass",
     "market": null,
     "selection": null,
     "selection_name": null,
@@ -1147,20 +1258,21 @@
     "coverage": 0.0,
     "published_utc": "2026-11-16T02:25:00Z",
     "narrative": {
-     "context": "Rest and schedule is unavailable (fight-camp data (layoff, reach, finish rates) is not connected yet). Recent form is unavailable (fight-camp data (layoff, reach, finish rates) is not connected yet). Injury data is unavailable (injury feed not connected or empty).",
+     "context": "Fight-camp context (layoff, weight cut, short notice) is unavailable.",
      "market": "Market line is unavailable for this game, so nothing can be priced.",
-     "matchup": "Team and fighter efficiency data (pace, shooting, striking, grappling) is unavailable in this build; only the market, rest and recent form are used.",
+     "matchup": "Fighter statistics are not connected, so this bout has no matchup analysis.",
      "projection": "No projection: the model needs a market line to anchor to.",
-     "risk": "Biggest risk: unavailable inputs (betting market, rest and schedule, recent form, injuries) could hide news the price already reflects.",
+     "risk": "Fighter styles, reach, layoffs and weight cuts are not connected, so this bout has no real analysis.",
      "thesis": [
       "No usable market line, so there is nothing to price against.",
-      "Coverage 0.0% of critical inputs.",
-      "No bet is recorded for this game."
+      "No usable market line, so there is nothing to price against.",
+      "Coverage 0.0% of critical inputs, and no bet is recorded."
      ]
     },
     "reason": "No usable market line, so there is nothing to price against.",
     "unavailable": [
      "betting market",
+     "team ratings",
      "rest and schedule",
      "recent form",
      "injuries"
@@ -1178,21 +1290,29 @@
       "reason": "no moneyline in the feed for this game",
       "source": "espn"
      },
+     "ratings": {
+      "available": false,
+      "fetched_at": "2026-11-16T02:25:00Z",
+      "reason": "fighter data (record, reach, layoff, finishing rates) is not connected yet",
+      "source": "none"
+     },
      "recent_form": {
       "available": false,
       "fetched_at": "2026-11-16T02:25:00Z",
-      "reason": "fight-camp data (layoff, reach, finish rates) is not connected yet",
+      "reason": "fighter data (record, reach, layoff, finishing rates) is not connected yet",
       "source": "none"
      },
      "schedule_rest": {
       "available": false,
       "fetched_at": "2026-11-16T02:25:00Z",
-      "reason": "fight-camp data (layoff, reach, finish rates) is not connected yet",
+      "reason": "fighter data (record, reach, layoff, finishing rates) is not connected yet",
       "source": "none"
      }
     },
     "narrative_source": "template",
-    "hash": "a042aaefb5cc"
+    "lean_name": null,
+    "signals": [],
+    "hash": "e2b8099fdcfe"
    },
    "grade": null,
    "missed": false
@@ -1214,7 +1334,7 @@
    "pick": {
     "verdict": "PASS",
     "tag": "ON_TIME",
-    "headline": "PASS / NO BET",
+    "headline": "Pass",
     "market": "ML",
     "selection": null,
     "selection_name": null,
@@ -1226,22 +1346,23 @@
     "units": null,
     "confidence": null,
     "top_pick": false,
-    "coverage": 0.4,
+    "coverage": 0.35,
     "published_utc": "2026-11-16T02:25:00Z",
     "narrative": {
-     "context": "Rest and schedule is unavailable (fight-camp data (layoff, reach, finish rates) is not connected yet). Recent form is unavailable (fight-camp data (layoff, reach, finish rates) is not connected yet). Injury data is unavailable (injury feed not connected or empty).",
+     "context": "Fight-camp context (layoff, weight cut, short notice) is unavailable.",
      "market": "Moneyline: Marcus Vale -180, Bruno Keane +150 at Demo Book. No-vig chance: Marcus Vale 61.6%, Bruno Keane 38.4% (vig 4.3%).",
-     "matchup": "Team and fighter efficiency data (pace, shooting, striking, grappling) is unavailable in this build; only the market, rest and recent form are used.",
-     "projection": "Model: Marcus Vale 61.6%, Bruno Keane 38.4%, anchored to the market. Best side Marcus Vale: model 61.6% vs market 61.6%, edge 0.0%, fair price -161 vs quoted -180.",
-     "risk": "Biggest risk: unavailable inputs (rest and schedule, recent form, injuries) could hide news the price already reflects.",
+     "matchup": "Fighter statistics are not connected, so this bout has no matchup analysis.",
+     "projection": "The team rating is unavailable, so the model equals the market. Side with the most value, Marcus Vale: model 61.6% vs market 61.6%, edge 0.0%, fair price -161 vs quoted -180.",
+     "risk": "Fighter styles, reach, layoffs and weight cuts are not connected, so this bout has no real analysis.",
      "thesis": [
-      "Coverage is 40%, under the 80% needed to bet.",
-      "Coverage 40.0% of critical inputs.",
+      "Leans Marcus Vale: model 61.6% vs market 61.6%, edge 0.0% against a 2.5% minimum.",
+      "Coverage is 35%, under the 85% needed to bet.",
       "No bet is recorded for this game."
      ]
     },
-    "reason": "Coverage is 40%, under the 80% needed to bet.",
+    "reason": "Coverage is 35%, under the 85% needed to bet.",
     "unavailable": [
+     "team ratings",
      "rest and schedule",
      "recent form",
      "injuries"
@@ -1259,21 +1380,29 @@
       "reason": null,
       "source": "demo"
      },
+     "ratings": {
+      "available": false,
+      "fetched_at": "2026-11-16T02:25:00Z",
+      "reason": "fighter data (record, reach, layoff, finishing rates) is not connected yet",
+      "source": "none"
+     },
      "recent_form": {
       "available": false,
       "fetched_at": "2026-11-16T02:25:00Z",
-      "reason": "fight-camp data (layoff, reach, finish rates) is not connected yet",
+      "reason": "fighter data (record, reach, layoff, finishing rates) is not connected yet",
       "source": "none"
      },
      "schedule_rest": {
       "available": false,
       "fetched_at": "2026-11-16T02:25:00Z",
-      "reason": "fight-camp data (layoff, reach, finish rates) is not connected yet",
+      "reason": "fighter data (record, reach, layoff, finishing rates) is not connected yet",
       "source": "none"
      }
     },
     "narrative_source": "template",
-    "hash": "960f125f6da4"
+    "lean_name": "Marcus Vale",
+    "signals": [],
+    "hash": "1c15abb8847e"
    },
    "grade": null,
    "missed": false
@@ -1284,11 +1413,6 @@
   "last_tick_utc": "2026-11-16T03:45:00Z",
   "last_publish_utc": "2026-11-16T03:45:00Z",
   "sources": {
-   "scoreboard:dwcs": {
-    "ok": true,
-    "detail": "2026-11-17",
-    "at": "2026-11-16T03:00:00Z"
-   },
    "scoreboard:mlb": {
     "ok": true,
     "detail": "2026-11-17",
@@ -1315,8 +1439,8 @@
     "at": "2026-11-16T03:00:00Z"
    },
    "injuries:mlb": {
-    "ok": false,
-    "detail": "empty",
+    "ok": true,
+    "detail": "empty (nothing listed, possibly off-season)",
     "at": "2026-11-16T03:00:00Z"
    },
    "injuries:nba": {
@@ -1341,6 +1465,109 @@
    "checked_utc": null,
    "problems": []
   },
+  "backtest": {},
+  "integrations": {
+   "version": "0.3.1",
+   "generated_utc": "2026-11-16T03:45:00Z",
+   "items": [
+    {
+     "group": "Updates",
+     "name": "Updater",
+     "state": "ok",
+     "detail": "Last ran 0 min ago."
+    },
+    {
+     "group": "Updates",
+     "name": "Last pick posted",
+     "state": "ok",
+     "detail": "0 min ago"
+    },
+    {
+     "group": "Odds",
+     "name": "ESPN odds",
+     "state": "ok",
+     "detail": "2 of 2 upcoming games have a moneyline."
+    },
+    {
+     "group": "Odds",
+     "name": "The Odds API",
+     "state": "off",
+     "detail": "Not set up. Only needed if ESPN has no odds. Add the GitHub secret ODDS_API_KEY."
+    },
+    {
+     "group": "AI text",
+     "name": "Gemini",
+     "state": "off",
+     "detail": "Not set up. Add the GitHub secret GEMINI_API_KEY."
+    },
+    {
+     "group": "AI text",
+     "name": "Mistral",
+     "state": "off",
+     "detail": "Not set up. Add the GitHub secret MISTRAL_API_KEY."
+    },
+    {
+     "group": "AI text",
+     "name": "Cloudflare Workers AI",
+     "state": "off",
+     "detail": "Not set up. Add the GitHub secret CLOUDFLARE_AI."
+    },
+    {
+     "group": "AI text",
+     "name": "OpenRouter",
+     "state": "off",
+     "detail": "Not set up. Add the GitHub secret OPENROUTER_API_KEY."
+    },
+    {
+     "group": "AI text",
+     "name": "Analysis text comes from",
+     "state": "idle",
+     "detail": "The built-in template (no AI provider has succeeded yet)."
+    },
+    {
+     "group": "Data",
+     "name": "Game feeds",
+     "state": "ok",
+     "detail": "5 of 5 working."
+    },
+    {
+     "group": "Data",
+     "name": "Injury feeds",
+     "state": "ok",
+     "detail": "4 of 4 working."
+    },
+    {
+     "group": "Data",
+     "name": "Finished games stored",
+     "state": "warn",
+     "detail": "NBA 97, NHL 73, NFL 50, MLB 0. Ratings need history: run the backfill task."
+    },
+    {
+     "group": "Data",
+     "name": "Rating check",
+     "state": "idle",
+     "detail": "Not run yet. Run the backfill task."
+    },
+    {
+     "group": "System",
+     "name": "Ledger",
+     "state": "idle",
+     "detail": "Not checked yet (runs daily)."
+    },
+    {
+     "group": "System",
+     "name": "Database",
+     "state": "ok",
+     "detail": "Connected. 229 games and 66 picks stored."
+    },
+    {
+     "group": "System",
+     "name": "Pipeline version",
+     "state": "info",
+     "detail": "0.3.1"
+    }
+   ]
+  },
   "experimental": true
  },
  "top_picks": [
@@ -1348,7 +1575,7 @@
   "demo:n2",
   "demo:h1",
   "demo:b1",
-  "demo:b4"
+  "demo:h2"
  ],
  "demo_note": "Demo data: fictional teams and a simulated day. These are not real picks or real results."
 }

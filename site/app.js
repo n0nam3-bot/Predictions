@@ -1,6 +1,7 @@
 (function () {
   'use strict';
   const SPORTS = { nfl: 'NFL', nba: 'NBA', nhl: 'NHL', mlb: 'MLB', ufc: 'UFC', dwcs: 'DWCS' };
+  const SITE_VERSION = '0.3.2';
   const params = new URLSearchParams(location.search);
   const localHost = ['localhost', '127.0.0.1', ''].includes(location.hostname);
   const state = { tz: 'America/New_York', date: null, filter: 'all', latest: null, days: {}, loading: true, error: '', open: new Set(),
@@ -116,7 +117,12 @@
       if (rec.w + rec.l + rec.v) bits.push(rec.w + ' won, ' + rec.l + ' lost' + (rec.v ? ', ' + rec.v + ' void' : ''));
       if (rec.pending) bits.push(rec.pending + ' to settle');
       p = esc(bits.join('. ')) + '.' + (rec.w + rec.l ? ' <span class="' + (rec.units >= 0 ? 'pos' : 'neg') + '">' + units(rec.units) + '</span>' : '');
-    } else if (analysed) { h = 'No ' + label + 'plays ' + when(state.date); p = analysed + ' of ' + games.length + ' games analysed, and every one was a pass.'; }
+    } else if (analysed) {
+      h = 'No ' + label + 'plays ' + when(state.date); p = analysed + ' of ' + games.length + ' games analysed, and every one was a pass.';
+      const best = games.filter((g) => g.pick && g.pick.edge != null && g.pick.lean_name).sort((a, b) => b.pick.edge - a.pick.edge)[0];
+      const min = state.latest && state.latest.thresholds ? state.latest.thresholds.play_min_edge : 0.025;
+      if (best) p += ' Closest to a play: ' + best.pick.lean_name + ' at ' + (best.pick.edge >= 0 ? '+' : '\u2212') + Math.abs(best.pick.edge * 100).toFixed(1) + '% edge, against a ' + (min * 100).toFixed(1) + '% minimum.';
+    }
     else { h = games.length + ' ' + label + (games.length === 1 ? 'game ' : 'games ') + when(state.date); p = 'Analysis posts about 30 minutes before each game and 90 minutes before the first fight on a card.'; }
     const ov = state.latest && state.latest.records && (state.filter === 'all' ? state.latest.records.overall : (state.latest.records.by_sport || {})[state.filter]);
     const record = ov ? '<div class="record"><span>Overall <b>' + wlv(ov) + '</b>' + (ov.win_pct != null ? ', ' + ov.win_pct + '%' : '') + (ov.units ? ', ' + units(ov.units) : '') + '</span></div>' : '';
@@ -137,7 +143,7 @@
       ? '<p><b class="' + g.grade.grade.toLowerCase() + '">Result: ' + g.grade.grade + '</b>, ' + esc(g.grade.reason || '') +
         (g.grade.closing_odds != null ? '. Closing line ' + odds(g.grade.closing_odds) + (g.grade.clv != null ? ', closing-line value ' + (g.grade.clv * 100).toFixed(1) + '%' : '') : '') + '.</p>' : '';
     const inputs = Object.entries(p.inputs || {}).map(([k, v]) => esc(k.replace('_', ' ')) + (v.available ? '' : ' (unavailable)')).join(', ');
-    return '<p><b>' + esc(typo(p.verdict === 'PLAY' ? p.headline : 'Pass: ' + (p.reason || 'no edge'))) + '</b></p>' + res +
+    return '<p><b>' + esc(typo(p.headline)) + '</b></p>' + res +
       '<ul>' + (n.thesis || []).map((t) => '<li>' + esc(typo(t)) + '</li>').join('') + '</ul><dl>' + rows + '</dl>' +
       '<p class="fine">Coverage ' + Math.round(p.coverage * 100) + '%' + (p.unavailable && p.unavailable.length ? ', missing ' + esc(p.unavailable.join(', ')) : '') +
       '. Inputs: ' + inputs + '. Posted ' + esc(clock(p.published_utc)) + (p.tag === 'LATE' ? ' (late)' : '') + ', locked as <code>' + esc(p.hash) + '</code>.</p>';
@@ -152,8 +158,12 @@
       if (g.grade && ['W', 'L', 'V'].includes(g.grade.grade)) out = '<span class="big ' + g.grade.grade.toLowerCase() + '">' + g.grade.grade + '</span><span class="sub">' + (g.grade.grade === 'V' ? 'void' : units(g.grade.profit_units || 0)) + '</span>';
       else out = '<span class="big">' + p.units + 'u</span>' + (g.status === 'in_progress' ? '<span class="sub">Live</span>' : g.status === 'final' ? '<span class="sub">Checking</span>' : '');
     } else if (kind === 'passed') {
-      l1 = esc(away(g)); l2 = esc(p.reason || 'No edge');
-      out = g.home_score != null && g.status === 'final' ? '<span class="sub">' + Math.round(g.away_score) + dash + Math.round(g.home_score) + '</span>' : g.status === 'in_progress' ? '<span class="sub">Live</span>' : '';
+      const sig = (p.signals || []).join(', ');
+      l1 = esc(away(g));
+      l2 = p.lean_name ? 'Leans ' + esc(p.lean_name) + (sig ? ', ' + esc(sig) : '') : esc(p.reason || 'No edge');
+      const edge = p.edge != null && p.lean_name ? '<span class="big q">' + (p.edge >= 0 ? '+' : '\u2212') + Math.abs(p.edge * 100).toFixed(1) + '%</span>' : '';
+      const tail = g.status === 'final' && g.home_score != null ? Math.round(g.away_score) + dash + Math.round(g.home_score) : g.status === 'in_progress' ? 'Live' : edge ? 'edge' : '';
+      out = edge + (tail ? '<span class="sub">' + tail + '</span>' : '');
     } else if (kind === 'waiting') {
       const m = mins(g.publish_at_utc);
       l1 = esc(away(g)); l2 = 'Analysis posts ' + esc(clock(g.publish_at_utc)) + (m > 0 ? ', in ' + (m >= 60 ? Math.floor(m / 60) + ' h ' + (m % 60) + ' min' : m + ' min') : ', due now');
@@ -176,28 +186,19 @@
     }
     const f = games.filter((g) => state.filter === 'all' || g.sport === state.filter).sort((a, b) => (a.start_utc < b.start_utc ? -1 : a.start_utc > b.start_utc ? 1 : a.id < b.id ? -1 : 1));
     const plays = f.filter((g) => g.pick && g.pick.verdict === 'PLAY').sort((a, b) => (b.pick.top_pick - a.pick.top_pick) || (a.start_utc < b.start_utc ? -1 : 1));
-    const passed = f.filter((g) => g.pick && g.pick.verdict !== 'PLAY');
+    const passed = f.filter((g) => g.pick && g.pick.verdict !== 'PLAY').sort((a, b) => ((b.pick.edge == null ? -9 : b.pick.edge) - (a.pick.edge == null ? -9 : a.pick.edge)) || (a.start_utc < b.start_utc ? -1 : 1));
     const waiting = f.filter((g) => !g.pick && !g.missed && g.status === 'scheduled');
     const other = f.filter((g) => !g.pick && !(!g.missed && g.status === 'scheduled'));
-    const group = (title, list, kind, cls) => (list.length ? '<section class="group ' + cls + '"><h2>' + title + ' ' + list.length + '</h2>' + list.map((g) => row(g, kind)).join('') + '</section>' : '');
-    el.innerHTML = '<div class="' + (state.animate ? 'enter' : '') + '">' + group('Plays', plays, 'plays', 'plays') + group('Passed', passed, 'passed', 'quiet') +
+    const group = (title, list, kind, cls, note) => (list.length ? '<section class="group ' + cls + '"><h2>' + title + ' ' + list.length + (note ? '<span class="note">' + note + '</span>' : '') + '</h2>' + list.map((g) => row(g, kind)).join('') + '</section>' : '');
+    el.innerHTML = '<div class="' + (state.animate ? 'enter' : '') + '">' + group('Plays', plays, 'plays', 'plays') + group('Passed', passed, 'passed', 'quiet', 'largest edge first') +
       group('Waiting for analysis', waiting, 'waiting', 'quiet') + group('Not analysed', other, 'other', 'quiet') + '</div>';
     if (!f.length) el.innerHTML = '';
   }
 
-  function renderStatus() {
-    const el = $('#status'); el.hidden = !state.statusOpen;
-    if (!state.statusOpen) return;
-    const d = state.latest || {}; const h = d.health || {}; const api = state.health;
-    const ago = (iso) => (iso ? clock(iso) + ', ' + Math.max(0, Math.round((now() - Date.parse(iso)) / 60000)) + ' min ago' : 'never');
-    const src = Object.entries(h.sources || {}); const bad = src.filter(([, v]) => !v.ok);
-    const rows = [['Data', esc(d.source || 'none')], ['Last update', esc(ago(d.generated_utc))], ['Last tick', esc(ago(h.last_tick_utc))], ['Last pick posted', esc(ago(h.last_publish_utc))],
-      ['Feeds', src.length ? (bad.length ? '<span class="bad">' + bad.length + ' failing</span>, ' + esc(bad.map(([k, v]) => k + ': ' + v.detail).join('; ')) : '<span class="ok">All ' + src.length + ' working</span>') : 'None yet'],
-      ['Ledger', h.ledger && h.ledger.ok === true ? '<span class="ok">Clean</span>' : h.ledger && h.ledger.ok === false ? '<span class="bad">' + esc((h.ledger.problems || []).join('; ')) + '</span>' : 'Not checked yet'],
-      ['Deployed commit', api ? esc((api.commit || 'unknown').slice(0, 7)) : 'Checking'],
-      ['Database', api ? (api.db === 'ok' ? '<span class="ok">Connected</span>' : '<span class="bad">' + esc(api.error || 'error') + '</span>, ' + esc(hint(api.error || ''))) : state.loadError ? '<span class="bad">' + esc(state.loadError) + '</span>' : 'Checking'],
-      ['Model', h.experimental ? 'Experimental baseline, not backtested' : 'n/a']];
-    el.innerHTML = '<h2>Status</h2><dl>' + rows.map((r) => '<dt>' + r[0] + '</dt><dd>' + r[1] + '</dd>').join('') + '</dl>';
+  function backtestText(b) {
+    const rows = Object.entries(b || {}).filter(([, v]) => v.games);
+    if (!rows.length) return 'Not run yet. Run the backfill task.';
+    return rows.map(([k, v]) => SPORTS[k] + ' ' + (v.accuracy * 100).toFixed(1) + '% of ' + v.games + ' winners, log loss ' + v.log_loss + ' vs ' + v.baseline_log_loss + ' naive').join('; ');
   }
 
   function staleNote() {
@@ -206,6 +207,23 @@
     const gap = (now() - Date.parse(d.health.last_tick_utc)) / 60000;
     if (gap <= 30) return '';
     return 'New picks are delayed: the updater last ran ' + (gap >= 120 ? Math.round(gap / 60) + ' hours' : Math.round(gap) + ' minutes') + ' ago.';
+  }
+
+  const TAG = { ok: 'Working', warn: 'Check', bad: 'Failing', off: 'Not set up', idle: 'Waiting', info: '' };
+  function renderStatus() {
+    const el = $('#status'); el.hidden = !state.statusOpen;
+    if (!state.statusOpen) return;
+    const d = state.latest || {}; const h = d.health || {}; const api = state.health;
+    const items = (h.integrations && h.integrations.items) || [];
+    const groups = ['Updates', 'Odds', 'AI text', 'Data', 'System'];
+    const row = (i) => '<div class="st-row"><span class="dot ' + i.state + '"></span><div><b>' + esc(i.name) + '</b>' + (TAG[i.state] ? ' <span class="tag ' + i.state + '">' + TAG[i.state] + '</span>' : '') + '<span class="st-detail">' + esc(i.detail) + '</span></div></div>';
+    let html = '<h2>Status</h2>';
+    if (!items.length) html += '<p class="empty">' + (state.loadError ? esc(state.loadError) : 'No status has been written yet. It appears after the first updater run.') + '</p>';
+    html += groups.map((g) => { const rows = items.filter((i) => i.group === g); return rows.length ? '<section class="st-group"><h3>' + g + '</h3>' + rows.map(row).join('') + '</section>' : ''; }).join('');
+    const site = [{ name: 'Website version', state: 'info', detail: SITE_VERSION + (h.integrations && h.integrations.version && h.integrations.version !== SITE_VERSION ? ', but the updater is on ' + h.integrations.version + '. One of them has not been upgraded.' : '.') },
+      { name: 'Deployed commit', state: api ? (api.ok ? 'info' : 'bad') : 'idle', detail: api ? (api.commit || 'unknown').slice(0, 7) + (api.ok ? '' : ', database error: ' + (api.error || '')) : 'Checking.' }];
+    html += '<section class="st-group"><h3>Website</h3>' + site.map(row).join('') + '</section>';
+    el.innerHTML = html;
   }
 
   function render() {

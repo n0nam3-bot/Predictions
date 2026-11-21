@@ -3,7 +3,7 @@ import json
 import pytest
 
 from picks import config, decide, facts, llm, model, narrative, store, validator
-from test_engine import add_game, mkstore
+from test_engine import add_game, mkstore, seed_ratings
 
 CFG = config.load()
 
@@ -11,10 +11,7 @@ CFG = config.load()
 def build(with_history=True):
     s = mkstore()
     if with_history:
-        for i, (h, a, w) in enumerate([("Harbor City Anglers", "Lakeview Herons", "home"),
-                                       ("Ridge Bears", "Harbor City Anglers", "away"),
-                                       ("Lakeview Herons", "Ridge Bears", "away")]):
-            add_game(s, f"h{i}", h, a, f"2026-11-{10 + i}T00:00:00Z", "final", w)
+        seed_ratings(s, "Harbor City Anglers", "Lakeview Herons")
     add_game(s, "g1", "Harbor City Anglers", "Lakeview Herons", "2026-11-14T00:00:00Z",
              odds={"home_ml": -110, "away_ml": -110, "book": "Demo Book", "source": "demo"})
     s.x("INSERT INTO snapshots (key, json, updated_utc) VALUES ('injuries:nba', ?, 't')",
@@ -32,13 +29,14 @@ def test_template_only_uses_packet_facts():
         p, m, d = build(hist)
         n = narrative.template(p, m, d)
         assert narrative.validate_all(n, p, m, d) == []
-        assert len(n["thesis"]) == 3 and n["headline"].startswith(("PASS", "PLAY"))
+        assert len(n["thesis"]) == 3 and n["headline"].startswith(("Pass", "PLAY"))
 
 
 def test_template_flags_unavailable_inputs():
     p, m, d = build(False)
     n = narrative.template(p, m, d)
-    assert "unavailable" in n["context"] and "Injury" in n["context"] or "injur" in n["context"].lower()
+    assert "unavailable" in n["context"] and "unavailable" in n["matchup"]
+    assert "goalie" not in (n["risk"] + n["matchup"]).lower()                      # hockey wording never leaks into NBA text
 
 
 class FakeChain:

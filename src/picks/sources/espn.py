@@ -154,11 +154,11 @@ class ESPNSource:
     def __init__(self, cfg, session=None):
         self.cfg, self.http = cfg, session or requests.Session()
 
-    def _get_json(self, url):
+    def _get_json(self, url, attempts=3, timeout=20):
         last = None
-        for attempt in range(3):
+        for attempt in range(attempts):
             try:
-                r = self.http.get(url, headers=UA, timeout=20)
+                r = self.http.get(url, headers=UA, timeout=timeout)
                 if r.status_code == 200:
                     return r.json()
                 last = f"HTTP {r.status_code}"
@@ -176,6 +176,12 @@ class ESPNSource:
         d = day if isinstance(day, date) else date.fromisoformat(str(day))
         feed = self.cfg["sports"][sport_key].get("via", sport_key)
         raw = self._get_json(f"{self._base(feed)}/scoreboard?dates={d:%Y%m%d}&limit=300")
+        return parse_scoreboard(raw, feed, self.cfg["sports"][feed]["kind"])
+
+    def fetch_range(self, sport_key, start, end):
+        """Up to a few weeks of finished games in one request (ESPN accepts dates=YYYYMMDD-YYYYMMDD)."""
+        feed = self.cfg["sports"][sport_key].get("via", sport_key)
+        raw = self._get_json(f"{self._base(feed)}/scoreboard?dates={start:%Y%m%d}-{end:%Y%m%d}&limit=1000", attempts=2, timeout=30)
         return parse_scoreboard(raw, feed, self.cfg["sports"][feed]["kind"])
 
     def fetch_injuries(self, sport_key):

@@ -2,30 +2,36 @@
 timezone: America/New_York
 
 timing:                       # minutes before scheduled start
-  team: {due_minutes: 35, late_after_minutes: 10}   # target T-30; DUE at T-35; LATE once under T-10
+  team: {due_minutes: 30, late_after_minutes: 10}   # posts at the first tick at or under T-30; LATE once under T-10
   mma:  {due_minutes: 95, late_after_minutes: 60}   # target T-90 before the first bout of the card
 
 thresholds:
   play_min_edge: 0.025        # model win% minus no-vig market win%
-  play_min_coverage: 0.80     # share of critical inputs actually available
+  play_min_coverage: 0.85     # share of critical inputs actually available (so injuries must be present)
   edge_error_cap: 0.10        # an edge this large is treated as a data or model error -> PASS
   top_min_edge: 0.04
-  top_min_coverage: 0.90
+  top_min_coverage: 0.95
   top_per_day: 5              # designated at publish time so a locked pick never changes
   max_units: 3
 
 model:
-  anchor_shrink: 0.5          # how far the model may move away from the no-vig market
-  logit_weights:              # v0 baseline, unvalidated (see docs/METHODOLOGY.md)
+  anchor_shrink: 0.25         # the model may close this share of the gap between its rating and the no-vig market
+  min_rated_games: 8          # stored games needed per team before a rating is trusted
+  logit_weights:              # small schedule nudges added to the rating, in logit points (unvalidated)
     rest_day_diff: 0.02
     back_to_back: 0.05
-    recent_form: 0.04
+  elo:                        # K = how fast ratings move, home = home-advantage in rating points
+    nba: {k: 20, home: 70}
+    nhl: {k: 8, home: 35}
+    nfl: {k: 20, home: 48}
+    mlb: {k: 6, home: 25}
 
 coverage_weights:             # share of the coverage score each input provides
-  market: 0.40
-  schedule_rest: 0.20
-  recent_form: 0.15
-  injuries: 0.25
+  market: 0.35
+  ratings: 0.25
+  schedule_rest: 0.10
+  recent_form: 0.10
+  injuries: 0.20
 
 sports:
   nfl:  {kind: team, espn: [football, nfl]}

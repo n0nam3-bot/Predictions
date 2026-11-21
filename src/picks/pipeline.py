@@ -3,7 +3,7 @@ import json
 from datetime import timedelta
 from zoneinfo import ZoneInfo
 
-from . import decide, facts, grading, ledger, market, model, narrative, records, timing
+from . import decide, facts, grading, ledger, market, model, narrative, ratings as ratings_mod, records, timing
 from .timing import DUE, LATE, MISSED, iso, parse_utc
 
 SPORT_ORDER = ["mlb", "nfl", "nba", "nhl", "ufc", "dwcs"]
@@ -93,7 +93,7 @@ def refresh_injuries(store, source, cfg, now, sports):
             data = source.fetch_injuries(sport)
             if data:
                 put_snapshot(store, f"injuries:{sport}", data, now)
-            _note_source(store, f"injuries:{sport}", bool(data), "ok" if data else "empty", now)
+            _note_source(store, f"injuries:{sport}", True, "ok" if data else "empty (nothing listed, possibly off-season)", now)
         except Exception as exc:
             _note_source(store, f"injuries:{sport}", False, str(exc)[:160], now)
 
@@ -108,14 +108,69 @@ def run_schedule(store, source, cfg, now, back=7, fwd=2):
     return {"games_upserted": n}
 
 
-def run_backfill(store, source, cfg, now, days=45):
-    """Load past scoreboards so rest, form and the date picker have history."""
+UPSERT_SQL = ("INSERT INTO games (id, sport, kind, event_id, event_name, start_utc, home, away, venue, status, home_score, "
+              "away_score, winner, method, home_record, away_record, odds_json, updated_utc) "
+              "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) "
+              "ON CONFLICT(id) DO UPDATE SET start_utc=excluded.start_utc, status=excluded.status, "
+              "home_score=excluded.home_score, away_score=excluded.away_score, winner=excluded.winner, "
+              "method=excluded.method, home_record=excluded.home_record, away_record=excluded.away_record, "
+              "venue=excluded.venue, event_name=excluded.event_name, "
+              "odds_json=COALESCE(excluded.odds_json, games.odds_json), updated_utc=excluded.updated_utc")
+
+
+def _upsert_args(g, now):
+    return (g["id"], g["sport"], g["kind"], g.get("event_id"), g.get("event_name"), g["start_utc"], g["home"], g["away"],
+            g.get("venue"), g["status"], g.get("home_score"), g.get("away_score"), g.get("winner"), g.get("method"),
+            g.get("home_record"), g.get("away_record"), json.dumps(g["odds"]) if g.get("odds") else None, iso(now))
+
+
+def upsert_games_bulk(store, games, now, batch=60):
+    """Past games only (no odds snapshots): many rows per HTTP request."""
+    for i in range(0, len(games), batch):
+        store.many([(UPSERT_SQL, _upsert_args(g, now)) for g in games[i:i + batch]])
+    return len(games)
+
+
+def run_backfill(store, source, cfg, now, days=240, budget_minutes=10, log=print):
+    """Load past games in 30-day chunks, newest first. Stops cleanly when the time budget is spent and
+    remembers finished chunks, so running it again continues instead of starting over."""
+    import time
+    started = time.monotonic()
     heartbeat(store, "backfill", now)
     today = et_day(now, cfg)
-    pairs = {(s, today - timedelta(days=d)) for s in feeds(cfg) for d in range(1, days + 1)}
-    n = refresh_days(store, source, cfg, now, pairs)
+    n, skipped, partial = 0, 0, False
+    done = set(get_snapshot(store, "backfill_done", []))
+    if hasattr(source, "fetch_range"):
+        for sport in feeds(cfg):
+            end = today - timedelta(days=1)
+            while end > today - timedelta(days=days):
+                start = max(end - timedelta(days=29), today - timedelta(days=days))
+                tag = f"{sport}:{start}:{end}"
+                if tag in done and end < today - timedelta(days=3):
+                    skipped += 1
+                elif time.monotonic() - started > budget_minutes * 60:
+                    partial = True
+                    break
+                else:
+                    try:
+                        games = source.fetch_range(sport, start, end)
+                        n += upsert_games_bulk(store, games, now)
+                        done.add(tag)
+                        _note_source(store, f"backfill:{sport}", True, f"{start} to {end}: {len(games)} games", now)
+                        log(f"backfill {sport} {start} to {end}: {len(games)} games", flush=True)
+                    except Exception as exc:
+                        _note_source(store, f"backfill:{sport}", False, str(exc)[:160], now)
+                        log(f"backfill {sport} {start} to {end} FAILED: {str(exc)[:120]}", flush=True)
+                end = start - timedelta(days=1)
+            if partial:
+                break
+        put_snapshot(store, "backfill_done", sorted(done), now)
+    else:
+        pairs = {(s, today - timedelta(days=d)) for s in feeds(cfg) for d in range(1, days + 1)}
+        n = refresh_days(store, source, cfg, now, pairs)
     build_snapshots(store, cfg, now)
-    return {"days": days, "games_upserted": n}
+    return {"days": days, "games_upserted": n, "chunks_already_done": skipped, "partial": partial,
+            "note": "Time budget reached. Run backfill again to continue." if partial else "Complete."}
 
 
 def _row_game(row, odds):
@@ -161,9 +216,9 @@ def _candidates(store, now):
     return teams + bouts
 
 
-def publish_game(store, cfg, now, g, state, chain=None):
+def publish_game(store, cfg, now, g, state, chain=None, cache=None):
     th = cfg["thresholds"]
-    packet = facts.build_packet(store, g, now)
+    packet = facts.build_packet(store, g, now, cfg, cache)
     cov = facts.coverage(packet, cfg["coverage_weights"])
     m = model.project(packet, cfg)
     d = {**decide.decide(packet, m, cov, cfg), "coverage": cov}
@@ -178,6 +233,8 @@ def publish_game(store, cfg, now, g, state, chain=None):
     payload = {"headline": narr["headline"], "narrative": {k: narr[k] for k in narrative.SECTIONS + ["thesis"]},
                "narrative_source": src, "validator_problems": problems, "reason": d["reason"],
                "adjustments": (m or {}).get("adjustments", []), "home": g["home"], "away": g["away"],
+               "lean_name": g[d["selection"]] if d["selection"] in ("home", "away") else None,
+               "signals": narrative.signals(packet, m),
                "event_name": g.get("event_name"), "unavailable": [u["label"] for u in packet["unavailable"]],
                "inputs": {k: {"available": v["value"] is not None, "source": v["source"], "fetched_at": v["fetched_at"],
                               "reason": v["reason"]} for k, v in packet["inputs"].items()},
@@ -203,6 +260,7 @@ def run_tick(store, source, cfg, now, chain=None, odds_source=None):
     published = {r["game_id"] for r in store.q("SELECT game_id FROM picks")}
     items = timing.due_items(_candidates(store, now), now, published, cfg)
     stats = {"published": 0, "late": 0, "missed": 0, "items": len(items)}
+    rcache = ratings_mod.Cache(store, cfg)
     for state, kind, item_id, games_ in items:
         pending = [g for g in games_ if g["status"] in ("scheduled", "delayed") and parse_utc(g["start_utc"]) > now]
         if state == MISSED:
@@ -223,7 +281,7 @@ def run_tick(store, source, cfg, now, chain=None, odds_source=None):
             fresh = store.q("SELECT * FROM games WHERE id = ?", (g["id"],))[0]
             if fresh["status"] not in ("scheduled", "delayed"):
                 continue
-            if publish_game(store, cfg, now, fresh, state, chain):
+            if publish_game(store, cfg, now, fresh, state, chain, rcache):
                 stats["published"] += 1
                 stats["late"] += state == LATE
     build_snapshots(store, cfg, now)
@@ -281,7 +339,7 @@ def _pick_view(row, payload):
             "confidence": row["confidence"], "top_pick": bool(row["top_pick"]), "coverage": row["coverage"],
             "published_utc": row["published_utc"], "narrative": payload["narrative"], "reason": payload["reason"],
             "unavailable": payload["unavailable"], "inputs": payload["inputs"],
-            "narrative_source": payload["narrative_source"], "hash": row["hash"][:12]}
+            "narrative_source": payload["narrative_source"], "lean_name": payload.get("lean_name"), "signals": payload.get("signals", []), "hash": row["hash"][:12]}
 
 
 def build_snapshots(store, cfg, now):
@@ -320,12 +378,13 @@ def build_snapshots(store, cfg, now):
     health = {"generated_utc": iso(now), "last_tick_utc": (store.q("SELECT MAX(at_utc) AS m FROM heartbeat WHERE kind='tick'")[0]["m"]),
               "last_publish_utc": last_pub, "sources": sources, "quota": quota,
               "ledger": get_snapshot(store, "ledger_check", {"ok": None, "checked_utc": None, "problems": []}),
+              "backtest": get_snapshot(store, "backtest", {}), "integrations": get_snapshot(store, "integrations", {}),
               "experimental": True}
     span = store.q("SELECT MIN(start_utc) AS lo, MAX(start_utc) AS hi FROM games")[0]
     date_range = {"min": str(et_day(span["lo"], cfg)) if span["lo"] else None,
                   "max": str(et_day(span["hi"], cfg)) if span["hi"] else None}
     latest = {"schema": 1, "source": "live", "date_range": date_range, "generated_utc": iso(now), "timezone": cfg["timezone"],
-              "sports": SPORT_ORDER, "records": rec, "games": out, "health": health,
+              "sports": SPORT_ORDER, "thresholds": {k: cfg["thresholds"][k] for k in ("play_min_edge", "play_min_coverage")}, "records": rec, "games": out, "health": health,
               "top_picks": [x["id"] for x in out if x["pick"] and x["pick"]["top_pick"]]}
     put_snapshot(store, "latest", latest, now)
     put_snapshot(store, "record", rec, now)

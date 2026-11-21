@@ -5,7 +5,7 @@ from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from . import config, ledger, pipeline, store
+from . import config, ledger, pipeline, ratings as ratings_mod, status, store
 from .timing import iso, parse_utc
 
 START = datetime(2026, 11, 15, 12, 0, tzinfo=timezone.utc)
@@ -14,8 +14,8 @@ NOTE = "Demo data: fictional teams and a simulated day. These are not real picks
 
 
 def amplified(cfg):
+    """Demo only: let the model follow its own rating fully, so the demo day shows plays as well as passes."""
     c = deepcopy(cfg)
-    c["model"]["logit_weights"] = {k: v * 4 for k, v in c["model"]["logit_weights"].items()}
     c["model"]["anchor_shrink"] = 1.0
     return c
 
@@ -50,16 +50,18 @@ def scenario():
     return g
 
 
-# (team, days ago finals) -> gives each side rest and form for the model. Wins listed oldest first.
-HISTORY = {"Summit Ravens": ([7, 14, 21], "WWW"), "Delta Pilots": ([5, 12, 19], "LWL"),
-           "Cobalt Falcons": ([6, 13, 20], "WWW"), "Maple Wolves": ([4, 11, 18], "LLL"),
-           "Iron Coast Skaters": ([6, 4, 3], "WWW"), "Northgate Owls": ([5, 3, 1.2], "LLL"),
-           "Harbor City Anglers": ([6, 4, 3], "WWL"), "Lakeview Herons": ([6, 3, 1], "LWL"),
-           "Prairie Foxes": ([6, 4, 2], "WWL"), "Glacier Kings": ([5, 3, 1], "LLW"),
-           "Westfield Foxes": ([6, 4, 3, 1.6], "WWWW"), "Pine Valley Rams": ([5, 3, 1.8], "LLW"),
-           "Ridge Bears": ([5, 3, 2], "WLW"), "Iron Coast Smiths": ([5, 3, 1.9], "LWW"),
-           "Capital Owls": ([5, 3, 2], "WWW"), "Sunset Lions": ([5, 3, 1.5], "LLL"),
-           "Ember Bay Comets": ([5, 3, 2], "WWL"), "Redwater Pilots": ([5, 3, 2], "LWL")}
+# Team strength (-1 weak .. +1 strong) and days since each team last played, for rating and rest.
+STRENGTH = {"Summit Ravens": 0.8, "Delta Pilots": -0.6, "Cobalt Falcons": 0.7, "Maple Wolves": -0.5,
+            "Iron Coast Skaters": 0.6, "Northgate Owls": -0.4, "Prairie Foxes": 0.5, "Glacier Kings": -0.3,
+            "Ember Bay Comets": 0.3, "Redwater Pilots": -0.2, "Harbor City Anglers": 0.7, "Lakeview Herons": -0.6,
+            "Ridge Bears": 0.1, "Iron Coast Smiths": 0.0, "Westfield Foxes": 0.5, "Pine Valley Rams": -0.4,
+            "Capital Owls": -0.5, "Sunset Lions": 0.6}
+LAST_GAP = {"Delta Pilots": 4, "Summit Ravens": 7, "Maple Wolves": 7, "Cobalt Falcons": 7, "Northgate Owls": 1.1, "Iron Coast Skaters": 3,
+            "Glacier Kings": 1.2, "Prairie Foxes": 3, "Lakeview Herons": 1.1, "Harbor City Anglers": 3, "Pine Valley Rams": 1.2,
+            "Westfield Foxes": 3, "Sunset Lions": 1.2, "Capital Owls": 3}
+# Edge each game is priced to give the model (positive = value on the home side). Small ones become passes.
+TARGET_EDGE = {"n1": 0.06, "n2": 0.075, "h1": 0.07, "h2": 0.045, "h3": 0.03, "b1": 0.055, "b2": 0.004, "b3": 0.012, "b4": -0.05}
+BASE = {"nfl": (24, 4), "nba": (108, 7), "nhl": (3, 1)}
 SPORT_OF = {}
 
 
@@ -96,19 +98,43 @@ class FixtureSource:
         return self.injuries.get(sport, {})
 
 
-def _seed_history(st, games, now):
+def _seed_history(st, games, now, rng):
     team_sport = {}
     for g in games:
-        team_sport[g["home"]] = team_sport[g["away"]] = g["sport"]
+        if g["kind"] == "team":
+            team_sport[g["home"]] = team_sport[g["away"]] = g["sport"]
     n = 0
-    for team, (days_ago, results) in HISTORY.items():
-        for d, r in zip(days_ago, results):
+    for team, sport in team_sport.items():
+        base, spread = BASE[sport]
+        for i in range(12):
             n += 1
-            opp = f"Past Opponent {n % 5}"
-            pipeline.upsert_game(st, {"id": f"hist:{n}", "sport": team_sport[team], "kind": "team", "event_id": f"hist:{n}",
-                                      "event_name": "history", "start_utc": iso(START - timedelta(days=d)), "home": team,
-                                      "away": opp, "venue": None, "status": "final", "home_score": 100, "away_score": 90,
-                                      "winner": "home" if r == "W" else "away", "odds": None}, now)
+            days_ago = LAST_GAP.get(team, 3) + i * 2.6
+            win = rng.random() < 0.5 + 0.14 * STRENGTH.get(team, 0)
+            margin = rng.randint(1, max(2, spread))
+            hi, lo = base + margin, base
+            home = i % 2 == 0
+            hs, as_ = (hi, lo) if (win == home) else (lo, hi)
+            opp = f"Past Opponent {n % 9}"
+            pipeline.upsert_game(st, {"id": f"hist:{n}", "sport": sport, "kind": "team", "event_id": f"hist:{n}", "event_name": "history",
+                                      "start_utc": iso(START - timedelta(days=days_ago)), "home": team if home else opp, "away": opp if home else team,
+                                      "venue": None, "status": "final", "home_score": hs, "away_score": as_,
+                                      "winner": "home" if hs > as_ else "away", "odds": None}, now)
+
+
+def _price_games(st, games, cfg):
+    """Quote each scenario game so the rating model sees the edge in TARGET_EDGE (with a normal 4% vig)."""
+    from . import facts, market, model
+    rcache = ratings_mod.Cache(st, cfg)
+    for g in games:
+        key = g["id"].split(":")[1]
+        if g["kind"] != "team" or key not in TARGET_EDGE:
+            continue
+        probe = dict(g, odds_json=json.dumps({"home_ml": -110, "away_ml": -110}))
+        pk = facts.build_packet(st, probe, START, cfg, rcache)
+        rating_home = model.project(pk, cfg)["rating_home"]
+        p_mkt = min(max(rating_home - TARGET_EDGE[key], 0.25), 0.75)
+        g["odds"] = {"home_ml": market.prob_to_american(min(p_mkt + 0.02, 0.97)), "away_ml": market.prob_to_american(min(1 - p_mkt + 0.02, 0.97)),
+                     "book": "Demo Book", "source": "demo"}
 
 
 def _seed_old_record(st, cfg, rng):
@@ -146,8 +172,9 @@ def run(cfg=None):
                 injuries[sport].setdefault(g["away"], [])
     injuries["nfl"]["Delta Pilots"] = [{"name": "Joe Calder", "pos": "QB", "status": "Out"}]
     injuries["nhl"]["Northgate Owls"] = [{"name": "Piotr Nyl", "pos": "G", "status": "Out"}]
+    _seed_history(st, games, START, random.Random(11))
+    _price_games(st, games, cfg)
     src = FixtureSource(games, injuries)
-    _seed_history(st, games, START)
     _seed_old_record(st, cfg, random.Random(7))
     t = START
     while t <= FINAL:
@@ -161,7 +188,8 @@ def run(cfg=None):
         t += timedelta(minutes=5)
     src.now = FINAL
     pipeline.run_grade(st, src, cfg, FINAL)
-    latest = pipeline.get_snapshot(st, "latest")
+    status.write(st, cfg, FINAL, {})
+    latest = pipeline.build_snapshots(st, cfg, FINAL)
     latest["source"] = "demo"
     latest["demo_note"] = NOTE
     return latest, st

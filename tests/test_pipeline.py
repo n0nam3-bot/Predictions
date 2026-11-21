@@ -4,7 +4,8 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from picks import config, ledger, pipeline, store
+from picks import config, ledger, market, model, pipeline, ratings, store
+from test_engine import seed_ratings
 from picks.timing import iso
 
 CFG = config.load()
@@ -40,16 +41,17 @@ def s():
     return st
 
 
-def test_tick_publishes_at_t35_once_and_never_after_start(s):
+def test_tick_publishes_at_t30_once_and_never_after_start(s):
     start = T0 + timedelta(hours=2)
     src = Src([game("g1", start)])
     pipeline.run_schedule(s, src, CFG, T0)
     assert pipeline.run_tick(s, src, CFG, start - timedelta(minutes=60))["published"] == 0
-    r = pipeline.run_tick(s, src, CFG, start - timedelta(minutes=33))
+    assert pipeline.run_tick(s, src, CFG, start - timedelta(minutes=31))["published"] == 0
+    r = pipeline.run_tick(s, src, CFG, start - timedelta(minutes=30))
     assert r["published"] == 1 and r["late"] == 0
     p = s.q("SELECT * FROM picks")[0]
-    assert p["tag"] == "ON_TIME" and p["published_utc"] == iso(start - timedelta(minutes=33))
-    assert pipeline.run_tick(s, src, CFG, start - timedelta(minutes=30))["published"] == 0     # idempotent
+    assert p["tag"] == "ON_TIME" and p["published_utc"] == iso(start - timedelta(minutes=30))
+    assert pipeline.run_tick(s, src, CFG, start - timedelta(minutes=26))["published"] == 0     # idempotent
     assert len(s.q("SELECT * FROM picks")) == 1
 
 
@@ -74,7 +76,7 @@ def test_postponed_game_is_not_published(s):
     start = T0 + timedelta(hours=2)
     src = Src([game("g1", start, status="postponed")])
     pipeline.run_schedule(s, src, CFG, T0)
-    assert pipeline.run_tick(s, src, CFG, start - timedelta(minutes=33))["published"] == 0
+    assert pipeline.run_tick(s, src, CFG, start - timedelta(minutes=30))["published"] == 0
 
 
 def test_mma_card_publishes_whole_card_at_t95_of_first_bout(s):
@@ -90,68 +92,80 @@ def test_mma_card_publishes_whole_card_at_t95_of_first_bout(s):
     assert all(g["pick"]["verdict"] == "PASS" for g in latest["games"])
 
 
-def test_v0_baseline_never_plays_without_injury_data(s):
+def test_never_plays_without_injury_data(s):
     start = T0 + timedelta(hours=2)
     src = Src([game("g1", start)])
+    seed_ratings(s)
     pipeline.run_schedule(s, src, CFG, T0)
-    pipeline.run_tick(s, src, CFG, start - timedelta(minutes=32))
+    pipeline.run_tick(s, src, CFG, start - timedelta(minutes=30))
     p = s.q("SELECT * FROM picks")[0]
-    assert p["verdict"] == "PASS" and p["coverage"] < CFG["thresholds"]["play_min_coverage"]
+    assert p["verdict"] == "PASS" and p["coverage"] == 0.8 < CFG["thresholds"]["play_min_coverage"]     # everything but injuries
 
 
 def strong_cfg():
     c = deepcopy(CFG)
-    c["model"]["logit_weights"] = {k: v * 4 for k, v in c["model"]["logit_weights"].items()}
     c["model"]["anchor_shrink"] = 1.0
     return c
 
 
-def seed_history(s, home, away):
-    base = T0 - timedelta(days=6)
-    rows = [(home, "Ridge Bears", "home", 0), (home, "Iron Coast Smiths", "home", 1), (home, "Ridge Bears", "home", 2),
-            (away, "Ridge Bears", "away", 0), (away, "Iron Coast Smiths", "away", 1), ("Ridge Bears", away, "home", 4)]
-    for i, (h, a, w, d) in enumerate(rows):
-        pipeline.upsert_game(s, game(f"h{i}", base + timedelta(days=d), home=h, away=a, status="final",
-                                     winner=w, home_score=100, away_score=90, odds=None), T0)
+def odds_for(s, home, away, start, edge):
+    """Quote a price whose no-vig home probability sits `edge` below what the rating model will say."""
+    rat = ratings.build(s, "nba", CFG, iso(start))
+    p = rat.p_home(home, away) - edge
+    return {"home_ml": market.prob_to_american(p), "away_ml": market.prob_to_american(1 - p), "book": "Demo", "source": "demo"}
+
+
+def play_setup(s, edge=0.05):
+    start = T0 + timedelta(hours=3)
+    seed_ratings(s, "Harbor City Anglers", "Lakeview Herons")
+    inj = {"nba": {"Harbor City Anglers": [], "Lakeview Herons": [{"name": "Sam Rook", "pos": "G", "status": "Out"}]}}
+    g = game("g1", start, odds=odds_for(s, "Harbor City Anglers", "Lakeview Herons", start, edge))
+    return start, g, inj
 
 
 def test_full_flow_play_top_pick_grade_and_records(s):
     cfg = strong_cfg()
-    start = T0 + timedelta(hours=3)
-    seed_history(s, "Harbor City Anglers", "Lakeview Herons")
-    inj = {"nba": {"Harbor City Anglers": [], "Lakeview Herons": [{"name": "Sam Rook", "pos": "G", "status": "Out"}]}}
-    g = game("g1", start)
+    start, g, inj = play_setup(s)
     src = Src([g], inj)
     pipeline.run_schedule(s, src, cfg, T0)
-    r = pipeline.run_tick(s, src, cfg, start - timedelta(minutes=32))
+    r = pipeline.run_tick(s, src, cfg, start - timedelta(minutes=30))
     p = s.q("SELECT * FROM picks")[0]
     assert r["published"] == 1 and p["verdict"] == "PLAY", p["payload_json"]
     assert p["selection"] == "home" and p["units"] >= 1 and p["coverage"] == 1.0
     payload = json.loads(p["payload_json"])
     assert payload["narrative_source"] == "template" and payload["validator_problems"] == []
-    # game ends: home wins
+    assert payload["lean_name"] == "Harbor City Anglers" and "Elo" in payload["narrative"]["matchup"]
     src.games = [dict(g, status="final", winner="home", home_score=110, away_score=99)]
-    res = pipeline.run_grade(s, src, cfg, start + timedelta(hours=4))
-    assert res["graded"] == 1
+    assert pipeline.run_grade(s, src, cfg, start + timedelta(hours=4))["graded"] == 1
     gr = s.q("SELECT * FROM grades")[0]
-    assert gr["grade"] == "W" and gr["profit_units"] == pytest.approx(p["units"] * 100 / 110, abs=1e-3)
-    assert gr["closing_odds"] == -110 and gr["clv"] == 0.0
+    assert gr["grade"] == "W" and gr["profit_units"] == pytest.approx(market.profit_units(p["odds"], p["units"]), abs=1e-3)
     latest = pipeline.get_snapshot(s, "latest")
     assert latest["records"]["overall"]["w"] == 1 and latest["games"][0]["grade"]["grade"] == "W"
     assert latest["games"][0]["pick"]["selection_name"] == "Harbor City Anglers"
     assert ledger.verify_chain(s) == []
-    assert pipeline.run_grade(s, src, cfg, start + timedelta(hours=5))["graded"] == 0          # graded once
+    assert pipeline.run_grade(s, src, cfg, start + timedelta(hours=5))["graded"] == 0
 
 
-def test_voids_for_postponed_after_pick(s):
+def test_pass_rows_still_name_the_lean(s):
+    start, g, inj = play_setup(s, edge=0.005)
+    src = Src([g], inj)
+    pipeline.run_schedule(s, src, CFG, T0)
+    pipeline.run_tick(s, src, CFG, start - timedelta(minutes=30))
+    row = pipeline.get_snapshot(s, "latest")["games"][0]["pick"]
+    assert row["verdict"] == "PASS" and row["lean_name"] == "Harbor City Anglers" and row["headline"] == "Pass"
+    assert row["model_prob"] is not None and row["market_prob"] is not None
+    text = "\n".join(row["narrative"][k] for k in ("market", "matchup", "context", "projection", "risk") if k in row["narrative"])
+    assert "fighter" not in text.lower() and "striking" not in text.lower()
+
+
+def test_voids_for_cancelled_after_pick(s):
     cfg = strong_cfg()
-    start = T0 + timedelta(hours=3)
-    seed_history(s, "Harbor City Anglers", "Lakeview Herons")
-    src = Src([game("g1", start)], {"nba": {"Harbor City Anglers": [], "Lakeview Herons": [{"name": "Sam Rook", "status": "Out"}]}})
+    start, g, inj = play_setup(s)
+    src = Src([g], inj)
     pipeline.run_schedule(s, src, cfg, T0)
-    pipeline.run_tick(s, src, cfg, start - timedelta(minutes=32))
+    pipeline.run_tick(s, src, cfg, start - timedelta(minutes=30))
     assert s.q("SELECT verdict FROM picks")[0]["verdict"] == "PLAY"
-    src.games = [game("g1", start, status="cancelled")]
+    src.games = [dict(g, status="cancelled")]
     pipeline.run_grade(s, src, cfg, start + timedelta(hours=1))
     assert s.q("SELECT grade FROM grades")[0]["grade"] == "V"
     assert pipeline.get_snapshot(s, "latest")["records"]["overall"]["v"] == 1

@@ -36,7 +36,7 @@ START = datetime(2026, 11, 15, 20, 0, tzinfo=timezone.utc)
 
 
 @pytest.mark.parametrize("minutes_before,expected", [
-    (60, timing.WAIT), (36, timing.WAIT), (35, timing.DUE), (30, timing.DUE), (11, timing.DUE),
+    (60, timing.WAIT), (31, timing.WAIT), (30, timing.DUE), (25, timing.DUE), (11, timing.DUE),
     (9, timing.LATE), (1, timing.LATE), (0, timing.MISSED), (-5, timing.MISSED)])
 def test_team_windows(minutes_before, expected):
     now = START - timedelta(minutes=minutes_before)

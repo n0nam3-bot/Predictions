@@ -1,0 +1,86 @@
+import json
+from datetime import timedelta
+
+from picks import config, llm, narrative, pipeline, status
+from test_engine import add_game, mkstore, packet
+from test_pipeline import T0, Src, game
+
+CFG = config.load()
+
+
+def items(out):
+    return {i["name"]: i for i in out["items"]}
+
+
+def test_nothing_configured_says_so_plainly():
+    s = mkstore()
+    out = status.compute(s, CFG, T0, {})
+    d = items(out)
+    assert d["Updater"]["state"] == "bad" and "never run" in d["Updater"]["detail"]
+    assert d["The Odds API"]["state"] == "off" and "ODDS_API_KEY" in d["The Odds API"]["detail"]
+    for label in ("Gemini", "Mistral", "Cloudflare Workers AI", "OpenRouter"):
+        assert d[label]["state"] == "off"
+    assert d["Gemini"]["detail"].endswith("GEMINI_API_KEY.")
+    assert d["Analysis text comes from"]["detail"].startswith("The built-in template")
+    assert out["version"] and d["Pipeline version"]["detail"] == out["version"]
+
+
+def test_ai_provider_states_follow_real_calls():
+    s = mkstore()
+    env = {"GEMINI_API_KEY": "k", "MISTRAL_API_KEY": "k", "CLOUDFLARE_AI": "no-colon", "OPENROUTER_API_KEY": "k"}
+    assert items(status.compute(s, CFG, T0, env))["Gemini"]["state"] == "idle"
+    assert items(status.compute(s, CFG, T0, env))["Cloudflare Workers AI"]["state"] == "bad"
+
+    def fn(ok):
+        def call(key, model, system, user):
+            if not ok:
+                raise llm.LLMUnavailable("HTTP 404")
+            return "{}"
+        return call
+
+    chain = llm.Chain(s, CFG, T0, env, [("gemini", "GEMINI_API_KEY", fn(False)), ("mistral", "MISTRAL_API_KEY", fn(True))])
+    assert chain.generate("s", "u")[1] == "mistral"
+    d = items(status.compute(s, CFG, T0 + timedelta(minutes=1), env))
+    assert d["Gemini"]["state"] == "bad" and "404" in d["Gemini"]["detail"] and "model name" in d["Gemini"]["detail"]
+    assert d["Mistral"]["state"] == "ok" and "1 of 300 calls today" in d["Mistral"]["detail"]
+    assert d["Analysis text comes from"]["detail"] == "Mistral"
+
+
+def test_odds_states():
+    s = mkstore()
+    start = T0 + timedelta(hours=2)
+    pipeline.upsert_game(s, game("a", start), T0)
+    pipeline.upsert_game(s, game("b", start, odds=None), T0)
+    d = items(status.compute(s, CFG, T0, {}))
+    assert d["ESPN odds"]["state"] == "warn" and "1 of 2" in d["ESPN odds"]["detail"]
+    d = items(status.compute(s, CFG, T0, {"ODDS_API_KEY": "k"}))
+    assert d["The Odds API"]["state"] == "idle"
+    s.x("INSERT INTO quota (key, used, cap, updated_utc) VALUES ('oddsapi:2026-11', 12, 500, 't')")
+    assert "12 of 500" in items(status.compute(s, CFG, T0, {"ODDS_API_KEY": "k"}))["The Odds API"]["detail"]
+    pipeline._note_source(s, "odds:nba", False, "The Odds API HTTP 401", T0)
+    d = items(status.compute(s, CFG, T0, {"ODDS_API_KEY": "k"}))
+    assert d["The Odds API"]["state"] == "bad" and "401" in d["The Odds API"]["detail"]
+
+
+def test_status_reaches_the_public_health_snapshot(tmp_path):
+    from picks import cli
+    env = {"PICKS_DB": str(tmp_path / "p.db"), "GEMINI_API_KEY": "k"}
+    start = T0 + timedelta(hours=2)
+    assert cli.main(["tick", "--now", (start - timedelta(minutes=30)).isoformat()], source=Src([game("g1", start)]), env=env) == 0
+    from picks import store
+    health = pipeline.get_snapshot(store.connect(env), "latest")["health"]
+    names = {i["name"]: i for i in health["integrations"]["items"]}
+    assert names["Gemini"]["state"] in ("idle", "bad", "ok") and names["Updater"]["state"] == "ok"
+    assert "secret" not in json.dumps(health["integrations"]).lower().replace("github secret", "")        # never a key value
+
+
+def test_signals_are_short_and_grounded():
+    p = packet()
+    sig = narrative.signals(p, None)
+    assert "Harbor City Anglers rated higher by 60" in sig
+    assert "Lakeview Herons on a back-to-back" in sig and len(sig) <= 3
+    p["inputs"]["ratings"]["value"] = None
+    p["inputs"]["schedule_rest"]["value"] = None
+    p["inputs"]["recent_form"]["value"] = None
+    p["inputs"]["injuries"]["value"] = None
+    assert narrative.signals(p, None) == []

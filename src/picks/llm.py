@@ -1,5 +1,6 @@
 """Free-tier LLM chain: Gemini, Mistral, Cloudflare Workers AI, OpenRouter. Never Groq.
 Model names and limits change; they live in config.yaml and are checked by the source audit."""
+import json
 import os
 
 import requests
@@ -75,6 +76,17 @@ class Chain:
                      "ON CONFLICT(key) DO UPDATE SET used = used + 1, updated_utc = excluded.updated_utc",
                      (f"llm:{name}:{self.day}", cap, iso(self.now)))
 
+    def _record(self, name, ok, msg=""):
+        rows = self.store.q("SELECT json FROM snapshots WHERE key = 'llm_status'")
+        cur = json.loads(rows[0]["json"]) if rows else {}
+        e = cur.setdefault(name, {})
+        if ok:
+            e["ok_utc"] = iso(self.now)
+        else:
+            e["error"], e["error_utc"] = msg[:200], iso(self.now)
+        self.store.x("INSERT INTO snapshots (key, json, updated_utc) VALUES ('llm_status', ?, ?) ON CONFLICT(key) DO UPDATE SET "
+                     "json = excluded.json, updated_utc = excluded.updated_utc", (json.dumps(cur), iso(self.now)))
+
     def generate(self, system, user):
         errors = []
         for name, env_key, fn in self.available():
@@ -84,7 +96,10 @@ class Chain:
                 continue
             try:
                 self._count(name, cap)
-                return fn(self.env[env_key], self.cfg[name]["model"], system, user), name
+                text = fn(self.env[env_key].strip(), self.cfg[name]["model"], system, user)
+                self._record(name, True)
+                return text, name
             except Exception as exc:
                 errors.append(f"{name}: {exc}")
+                self._record(name, False, str(exc))
         raise LLMUnavailable("; ".join(errors) or "no provider configured")
