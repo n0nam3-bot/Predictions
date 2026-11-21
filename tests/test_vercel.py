@@ -25,15 +25,16 @@ def test_ignored_build_step_semantics(tmp_path):
     inbox_only = commit(tmp_path, "inbox/applied.json", "[]")
     workflow_only = commit(tmp_path, ".github/workflows/x.yml", "name: x")
     # nothing deployed yet: must build (exit code 1 means build, 0 means skip)
-    assert sh(CMD, tmp_path, {"VERCEL_GIT_PREVIOUS_SHA": ""}).returncode != 0
+    assert sh(CMD, tmp_path, {"VERCEL_GIT_PREVIOUS_SHA": ""}).returncode == 1
     # the failure the owner hit: HEAD only touched a workflow, but the site has never been deployed
     assert sh(CMD, tmp_path, {"VERCEL_GIT_PREVIOUS_SHA": ""}).returncode != 0
     # last good deploy was the first commit; later commits touched no site/api files: skip
     assert sh(CMD, tmp_path, {"VERCEL_GIT_PREVIOUS_SHA": first}).returncode == 0
     site_change = commit(tmp_path, "site/app.js", "new")
-    assert sh(CMD, tmp_path, {"VERCEL_GIT_PREVIOUS_SHA": first}).returncode != 0
+    assert sh(CMD, tmp_path, {"VERCEL_GIT_PREVIOUS_SHA": first}).returncode == 1
     api_change = commit(tmp_path, "api/x.js", "new")
     assert sh(CMD, tmp_path, {"VERCEL_GIT_PREVIOUS_SHA": site_change}).returncode != 0
     assert sh(CMD, tmp_path, {"VERCEL_GIT_PREVIOUS_SHA": api_change}).returncode == 0
     # unknown previous commit (shallow clone): build rather than skip
-    assert sh(CMD, tmp_path, {"VERCEL_GIT_PREVIOUS_SHA": "0" * 40}).returncode != 0
+    unknown = sh(CMD, tmp_path, {"VERCEL_GIT_PREVIOUS_SHA": "0" * 40})
+    assert unknown.returncode == 1 and "fatal" not in unknown.stderr                  # exactly 1 ("build"), and no scary git error

@@ -1,7 +1,7 @@
 (function () {
   'use strict';
   const SPORTS = { nfl: 'NFL', nba: 'NBA', nhl: 'NHL', mlb: 'MLB', ufc: 'UFC', dwcs: 'DWCS' };
-  const SITE_VERSION = '0.3.2';
+  const SITE_VERSION = '0.3.3';
   const params = new URLSearchParams(location.search);
   const localHost = ['localhost', '127.0.0.1', ''].includes(location.hostname);
   const state = { tz: 'America/New_York', date: null, filter: 'all', latest: null, days: {}, loading: true, error: '', open: new Set(),
