@@ -124,7 +124,8 @@ def parse_bouts(ev, sport_key):
                     "start_utc": comp.get("date") or ev["date"], "home": _get(a, "athlete", "displayName") or "TBD",
                     "away": _get(b, "athlete", "displayName") or "TBD", "venue": _get(ev, "venue", "fullName"),
                     "status": status, "home_score": None, "away_score": None, "winner": winner,
-                    "method": _get(comp, "status", "result", "name"), "home_record": None, "away_record": None,
+                    "method": _get(comp, "status", "result", "name"),
+                    "home_record": _get((a.get("records") or [{}])[0], "summary"), "away_record": _get((b.get("records") or [{}])[0], "summary"),
                     "odds": parse_odds(comp.get("odds"))})
     return out
 

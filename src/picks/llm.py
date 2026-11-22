@@ -15,7 +15,13 @@ class LLMUnavailable(RuntimeError):
 def _post(url, headers, body, timeout=40):
     r = requests.post(url, headers=headers, json=body, timeout=timeout)
     if r.status_code >= 400:
-        raise LLMUnavailable(f"HTTP {r.status_code}")
+        why = ""
+        try:
+            body = r.json()
+            why = (body.get("error") or {}).get("message") or body.get("message") or ""
+        except Exception:
+            why = (r.text or "")[:100]
+        raise LLMUnavailable(f"HTTP {r.status_code}" + (f": {str(why)[:110]}" if why else ""))
     return r.json()
 
 

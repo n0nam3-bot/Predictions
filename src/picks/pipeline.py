@@ -165,6 +165,9 @@ def run_backfill(store, source, cfg, now, days=240, budget_minutes=10, log=print
             if partial:
                 break
         put_snapshot(store, "backfill_done", sorted(done), now)
+        failed = [k for k, v in get_snapshot(store, "sources", {}).items() if k.startswith("backfill:") and not v["ok"]]
+        if not partial and not failed:
+            put_snapshot(store, "backfill_complete", {"at": iso(now), "days": days}, now)
     else:
         pairs = {(s, today - timedelta(days=d)) for s in feeds(cfg) for d in range(1, days + 1)}
         n = refresh_days(store, source, cfg, now, pairs)
@@ -234,7 +237,7 @@ def publish_game(store, cfg, now, g, state, chain=None, cache=None):
                "narrative_source": src, "validator_problems": problems, "reason": d["reason"],
                "adjustments": (m or {}).get("adjustments", []), "home": g["home"], "away": g["away"],
                "lean_name": g[d["selection"]] if d["selection"] in ("home", "away") else None,
-               "signals": narrative.signals(packet, m),
+               "signals": narrative.signals(packet, m), "lean_side": d["selection"] if d["selection"] in ("home", "away") else None,
                "event_name": g.get("event_name"), "unavailable": [u["label"] for u in packet["unavailable"]],
                "inputs": {k: {"available": v["value"] is not None, "source": v["source"], "fetched_at": v["fetched_at"],
                               "reason": v["reason"]} for k, v in packet["inputs"].items()},
@@ -339,7 +342,7 @@ def _pick_view(row, payload):
             "confidence": row["confidence"], "top_pick": bool(row["top_pick"]), "coverage": row["coverage"],
             "published_utc": row["published_utc"], "narrative": payload["narrative"], "reason": payload["reason"],
             "unavailable": payload["unavailable"], "inputs": payload["inputs"],
-            "narrative_source": payload["narrative_source"], "lean_name": payload.get("lean_name"), "signals": payload.get("signals", []), "hash": row["hash"][:12]}
+            "narrative_source": payload["narrative_source"], "lean_name": payload.get("lean_name"), "signals": payload.get("signals", []), "lean_side": payload.get("lean_side"), "hash": row["hash"][:12]}
 
 
 def build_snapshots(store, cfg, now):

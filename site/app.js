@@ -1,7 +1,7 @@
 (function () {
   'use strict';
   const SPORTS = { nfl: 'NFL', nba: 'NBA', nhl: 'NHL', mlb: 'MLB', ufc: 'UFC', dwcs: 'DWCS' };
-  const SITE_VERSION = '0.3.3';
+  const SITE_VERSION = '0.3.4';
   const params = new URLSearchParams(location.search);
   const localHost = ['localhost', '127.0.0.1', ''].includes(location.hostname);
   const state = { tz: 'America/New_York', date: null, filter: 'all', latest: null, days: {}, loading: true, error: '', open: new Set(),
@@ -160,7 +160,7 @@
     } else if (kind === 'passed') {
       const sig = (p.signals || []).join(', ');
       l1 = esc(away(g));
-      l2 = p.lean_name ? 'Leans ' + esc(p.lean_name) + (sig ? ', ' + esc(sig) : '') : esc(p.reason || 'No edge');
+      l2 = p.lean_name ? 'Leans ' + esc(p.lean_name) + (p.lean_side ? ' (' + p.lean_side + ')' : '') + (sig ? ', ' + esc(sig) : '') : esc(p.reason || 'No edge');
       const edge = p.edge != null && p.lean_name ? '<span class="big q">' + (p.edge >= 0 ? '+' : '\u2212') + Math.abs(p.edge * 100).toFixed(1) + '%</span>' : '';
       const tail = g.status === 'final' && g.home_score != null ? Math.round(g.away_score) + dash + Math.round(g.home_score) : g.status === 'in_progress' ? 'Live' : edge ? 'edge' : '';
       out = edge + (tail ? '<span class="sub">' + tail + '</span>' : '');
@@ -186,11 +186,13 @@
     }
     const f = games.filter((g) => state.filter === 'all' || g.sport === state.filter).sort((a, b) => (a.start_utc < b.start_utc ? -1 : a.start_utc > b.start_utc ? 1 : a.id < b.id ? -1 : 1));
     const plays = f.filter((g) => g.pick && g.pick.verdict === 'PLAY').sort((a, b) => (b.pick.top_pick - a.pick.top_pick) || (a.start_utc < b.start_utc ? -1 : 1));
-    const passed = f.filter((g) => g.pick && g.pick.verdict !== 'PLAY').sort((a, b) => ((b.pick.edge == null ? -9 : b.pick.edge) - (a.pick.edge == null ? -9 : a.pick.edge)) || (a.start_utc < b.start_utc ? -1 : 1));
+    const allPassed = f.filter((g) => g.pick && g.pick.verdict !== 'PLAY');
+    const bare = allPassed.filter((g) => g.pick.model_prob == null);
+    const passed = allPassed.filter((g) => g.pick.model_prob != null).sort((a, b) => ((b.pick.edge == null ? -9 : b.pick.edge) - (a.pick.edge == null ? -9 : a.pick.edge)) || (a.start_utc < b.start_utc ? -1 : 1));
     const waiting = f.filter((g) => !g.pick && !g.missed && g.status === 'scheduled');
     const other = f.filter((g) => !g.pick && !(!g.missed && g.status === 'scheduled'));
     const group = (title, list, kind, cls, note) => (list.length ? '<section class="group ' + cls + '"><h2>' + title + ' ' + list.length + (note ? '<span class="note">' + note + '</span>' : '') + '</h2>' + list.map((g) => row(g, kind)).join('') + '</section>' : '');
-    el.innerHTML = '<div class="' + (state.animate ? 'enter' : '') + '">' + group('Plays', plays, 'plays', 'plays') + group('Passed', passed, 'passed', 'quiet', 'largest edge first') +
+    el.innerHTML = '<div class="' + (state.animate ? 'enter' : '') + '">' + group('Plays', plays, 'plays', 'plays') + group('Passed', passed, 'passed', 'quiet', 'largest edge first') + (bare.length ? '<details class="group quiet bare"><summary>' + bare.length + (bare.length === 1 ? ' game' : ' games') + ' without odds or enough data</summary>' + bare.map((g) => row(g, 'passed')).join('') + '</details>' : '') +
       group('Waiting for analysis', waiting, 'waiting', 'quiet') + group('Not analysed', other, 'other', 'quiet') + '</div>';
     if (!f.length) el.innerHTML = '';
   }

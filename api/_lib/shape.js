@@ -63,7 +63,7 @@ function shapeRows(rows) {
         odds: r.odds, fair_odds: r.fair_odds, model_prob: r.model_prob, market_prob: r.market_prob, edge: r.edge,
         units: r.units, confidence: r.confidence, top_pick: !!r.top_pick, coverage: r.coverage,
         published_utc: r.published_utc, narrative: payload.narrative, reason: payload.reason,
-        unavailable: payload.unavailable, inputs: payload.inputs, narrative_source: payload.narrative_source, lean_name: payload.lean_name || null, signals: payload.signals || [],
+        unavailable: payload.unavailable, inputs: payload.inputs, narrative_source: payload.narrative_source, lean_name: payload.lean_name || null, signals: payload.signals || [], lean_side: payload.lean_side || null,
         hash: String(r.hash).slice(0, 12),
       };
       if (r.grade) game.grade = { grade: r.grade, reason: r.grade_reason, profit_units: r.profit_units, closing_odds: r.closing_odds, clv: r.clv };

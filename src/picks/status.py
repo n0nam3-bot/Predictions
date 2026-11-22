@@ -55,7 +55,8 @@ def compute(store, cfg, now, env):
     elif odds_err:
         add("Odds", "The Odds API", "bad", "Key is set but the last call failed: " + "; ".join(odds_err)[:140])
     elif not used:
-        add("Odds", "The Odds API", "idle", "Key is set. Not needed so far because ESPN supplies the odds.")
+        miss = len(rows) - with_ml
+        add("Odds", "The Odds API", "idle", "Key is set. " + (f"{miss} upcoming games have no ESPN odds; they are filled from here when they come due." if miss else "Not needed so far because ESPN supplies the odds."))
     else:
         add("Odds", "The Odds API", "ok", f"Working. {used[0]['used']} of {used[0]['cap']} credits used this month.")
 
@@ -82,8 +83,9 @@ def compute(store, cfg, now, env):
     add("AI text", "Analysis text comes from", "ok" if working else "idle", working[0] if working else "The built-in template (no AI provider has succeeded yet).")
 
     # --- data
-    feeds = {k: v for k, v in sources.items() if k.startswith("scoreboard:")}
-    inj = {k: v for k, v in sources.items() if k.startswith("injuries:")}
+    live = {sp for sp, spec in cfg["sports"].items() if "via" not in spec}          # ignore feeds we no longer fetch
+    feeds = {k: v for k, v in sources.items() if k.startswith("scoreboard:") and k.split(":")[1] in live}
+    inj = {k: v for k, v in sources.items() if k.startswith("injuries:") and k.split(":")[1] in live}
     for label, grp in (("Game feeds", feeds), ("Injury feeds", inj)):
         if not grp:
             add("Data", label, "idle", "Not fetched yet.")
@@ -92,8 +94,19 @@ def compute(store, cfg, now, env):
             add("Data", label, "ok" if not bad else "bad", f"{len(grp) - len(bad)} of {len(grp)} working." + (" Failing: " + "; ".join(bad) if bad else ""))
     counts = {r["sport"]: r["n"] for r in store.q("SELECT sport, COUNT(*) AS n FROM games WHERE status = 'final' GROUP BY sport")}
     rated = [f"{s.upper()} {counts.get(s, 0)}" for s in cfg["model"]["elo"]]
-    thin = [s for s in cfg["model"]["elo"] if 0 < counts.get(s, 0) < 120]
-    add("Data", "Finished games stored", "warn" if thin else "ok" if counts else "idle", ", ".join(rated) + ". Ratings need history: run the backfill task." if not counts or thin else ", ".join(rated) + ".")
+    need = cfg["model"].get("min_history", {})
+    thin = [s for s, n in need.items() if counts.get(s, 0) < n]
+    add("Data", "Finished games stored", "warn" if thin else "ok" if counts else "idle",
+        ", ".join(rated) + (f". Too few for ratings in {', '.join(x.upper() for x in thin)}: the updater loads more history by itself, or run the backfill task." if thin else "."))
+    bf = {k.split(":")[1]: v for k, v in sources.items() if k.startswith("backfill:") and k.split(":")[1] in live}
+    complete = _snap(store, "backfill_complete", None)
+    badbf = [f"{k.upper()}: {v['detail']}" for k, v in bf.items() if not v["ok"]]
+    if complete:
+        add("Data", "History load", "ok" if not badbf else "bad", f"Complete as of {_ago(now, complete['at'])} ({complete['days']} days)." + (" Problems: " + "; ".join(badbf)[:140] if badbf else ""))
+    elif bf or _snap(store, "backfill_done", []):
+        add("Data", "History load", "bad" if badbf else "warn", ("Problems: " + "; ".join(badbf)[:160]) if badbf else f"In progress: {len(_snap(store, 'backfill_done', []))} chunks loaded. It continues on every update.")
+    else:
+        add("Data", "History load", "idle", "Not started. It starts by itself on the next update, or run the backfill task.")
     bt = _snap(store, "backtest", {})
     done = {k: v for k, v in bt.items() if v.get("games")}
     add("Data", "Rating check", "ok" if done else "idle",

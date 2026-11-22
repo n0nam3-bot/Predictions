@@ -90,7 +90,8 @@ def template(packet, model, decision):
                           f"Average margin: {home} {signed(rat['home_margin'], 2)} {rat['unit']} per game ({rat['home_record']}), "
                           f"{away} {signed(rat['away_margin'], 2)} ({rat['away_record']}).")
     elif g["kind"] == "bout":
-        sec["matchup"] = "Fighter statistics are not connected, so this bout has no matchup analysis."
+        sec["matchup"] = ("Fighter statistics are not connected, so this bout is shown with the market only and has no matchup analysis."
+                          if mk else "Fighter statistics are not connected, so this bout has no matchup analysis.")
     else:
         sec["matchup"] = f"The team rating is unavailable: {inputs['ratings']['reason']}."
     sec["context"] = _context(packet, model) if g["kind"] == "team" else "Fight-camp context (layoff, weight cut, short notice) is unavailable."
@@ -124,36 +125,39 @@ def template(packet, model, decision):
                      f"edge {decision['edge'] * 100:.1f}% against a {decision['min_edge'] * 100:.1f}% minimum.")
         else:
             first = decision["reason"] or "No edge."
+        no_model = decision.get("model_prob") is None
         second = (f"Ratings alone give {home} {pct(model['rating_home'])}; the no-vig market gives {home} {pct(model['market_home'])}."
                   if model and model.get("rated") and decision.get("edge") is not None and not (decision["reason"] or "").startswith("Coverage")
                   else decision["reason"] or "No edge.")
+        if no_model:
+            second = UNKNOWN.get(g["sport"], "Not enough data to compare a model with the market.")
         cov_reason = (decision["reason"] or "").startswith("Coverage")
-        thesis = [first, second, "No bet is recorded for this game." if cov_reason else f"Coverage {pct(decision['coverage'])} of critical inputs, and no bet is recorded."]
+        thesis = [first, second, "No bet is recorded for this game." if (cov_reason or no_model) else f"Coverage {pct(decision['coverage'])} of critical inputs, and no bet is recorded."]
     return {**sec, "headline": headline, "thesis": thesis}
 
 
 def signals(packet, model):
-    """Up to three short facts that explain a row at a glance. Only facts present in the packet."""
-    g, inp = packet["game"], packet["inputs"]
-    home, away = g["home"], g["away"]
+    """Up to three short facts that explain a row at a glance. 'Home' and 'Away' follow the 'Away at Home' row title."""
+    inp = packet["inputs"]
+    side = lambda is_home: "Home" if is_home else "Away"
     out = []
     rat = inp["ratings"]["value"]
     if rat and rat["elo_gap"] >= 40:
-        out.append(f"{home if rat['home_elo'] >= rat['away_elo'] else away} rated higher by {rat['elo_gap']}")
+        out.append(f"{side(rat['home_elo'] >= rat['away_elo'])} rated higher by {rat['elo_gap']}")
     sr = inp["schedule_rest"]["value"]
     if sr and sr["home_back_to_back"] != sr["away_back_to_back"]:
-        out.append(f"{home if sr['home_back_to_back'] else away} on a back-to-back")
+        out.append(f"{side(sr['home_back_to_back'])} on a back-to-back")
     inj = inp["injuries"]["value"]
     if inj:
         n_home, n_away = len(inj["home"]), len(inj["away"])
         if max(n_home, n_away):
-            out.append(f"{home if n_home >= n_away else away}: {max(n_home, n_away)} out or doubtful")
+            out.append(f"{side(n_home >= n_away)}: {max(n_home, n_away)} out or doubtful")
     rf = inp["recent_form"]["value"]
     if rf and rf["home"]["games"] >= 3 and rf["away"]["games"] >= 3:
         hr, ar = rf["home"]["w"] / rf["home"]["games"], rf["away"]["w"] / rf["away"]["games"]
         if abs(hr - ar) >= 0.4:
             t = rf["home"] if hr > ar else rf["away"]
-            out.append(f"{home if hr > ar else away} {t['w']}-{t['l']} in its last {t['games']}")
+            out.append(f"{side(hr > ar)} {t['w']}-{t['l']} in its last {t['games']}")
     return out[:3]
 
 

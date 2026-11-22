@@ -17,6 +17,7 @@ thresholds:
 model:
   anchor_shrink: 0.25         # the model may close this share of the gap between its rating and the no-vig market
   min_rated_games: 8          # stored games needed per team before a rating is trusted
+  min_history: {nfl: 100, nba: 150, nhl: 150}   # below this many stored finals the tick keeps loading history by itself
   logit_weights:              # small schedule nudges added to the rating, in logit points (unvalidated)
     rest_day_diff: 0.02
     back_to_back: 0.05
@@ -42,7 +43,7 @@ sports:
   dwcs: {kind: bout, via: ufc}            # no feed of its own: Contender Series events are picked out of the UFC feed by name
 
 llm:                          # free tiers only, tried in this order. Groq is not used.
-  gemini:     {model: gemini-2.5-flash, daily_cap: 200}
+  gemini:     {model: gemini-flash-latest, daily_cap: 200}   # an alias Google keeps pointed at the current Flash model
   mistral:    {model: mistral-small-latest, daily_cap: 300}
   cloudflare: {model: "@cf/meta/llama-3.1-8b-instruct", daily_cap: 100}
   openrouter: {model: "openrouter/free", daily_cap: 40}

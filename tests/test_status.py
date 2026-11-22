@@ -77,10 +77,47 @@ def test_status_reaches_the_public_health_snapshot(tmp_path):
 def test_signals_are_short_and_grounded():
     p = packet()
     sig = narrative.signals(p, None)
-    assert "Harbor City Anglers rated higher by 60" in sig
-    assert "Lakeview Herons on a back-to-back" in sig and len(sig) <= 3
+    assert "Home rated higher by 60" in sig
+    assert "Away on a back-to-back" in sig and len(sig) <= 3 and not any("Harbor" in x for x in sig)
     p["inputs"]["ratings"]["value"] = None
     p["inputs"]["schedule_rest"]["value"] = None
     p["inputs"]["recent_form"]["value"] = None
     p["inputs"]["injuries"]["value"] = None
     assert narrative.signals(p, None) == []
+
+
+def test_status_ignores_feeds_we_no_longer_fetch_and_reports_history_load():
+    s = mkstore()
+    pipeline._note_source(s, "scoreboard:dwcs", False, "ESPN request failed: HTTP 400", T0)
+    pipeline._note_source(s, "scoreboard:nba", True, "2026-11-20", T0)
+    d = items(status.compute(s, CFG, T0, {}))
+    assert d["Game feeds"]["state"] == "ok" and "1 of 1" in d["Game feeds"]["detail"]
+    assert d["History load"]["state"] == "idle"
+    pipeline._note_source(s, "backfill:nba", False, "ESPN request failed: HTTP 503", T0)
+    d = items(status.compute(s, CFG, T0, {}))
+    assert d["History load"]["state"] == "bad" and "NBA" in d["History load"]["detail"]
+    assert d["Finished games stored"]["state"] in ("idle", "warn")
+
+
+def test_gemini_error_text_comes_through():
+    import requests
+
+    class R:
+        status_code = 404
+        text = ""
+
+        def json(self):
+            return {"error": {"message": "models/gemini-2.5-flash is not found for API version v1beta"}}
+
+    orig = requests.post
+    requests.post = lambda *a, **k: R()
+    try:
+        try:
+            llm.call_gemini("k", "gemini-2.5-flash", "s", "u")
+        except llm.LLMUnavailable as exc:
+            assert "404" in str(exc) and "is not found" in str(exc)
+        else:
+            raise AssertionError("should fail")
+    finally:
+        requests.post = orig
+    assert CFG["llm"]["gemini"]["model"] == "gemini-flash-latest"

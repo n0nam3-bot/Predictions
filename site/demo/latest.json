@@ -371,11 +371,12 @@
     "narrative_source": "template",
     "lean_name": "Summit Ravens",
     "signals": [
-     "Summit Ravens rated higher by 131",
-     "Delta Pilots: 1 out or doubtful",
-     "Summit Ravens 4-1 in its last 5"
+     "Home rated higher by 131",
+     "Away: 1 out or doubtful",
+     "Home 4-1 in its last 5"
     ],
-    "hash": "f7a73a22595c"
+    "lean_side": "home",
+    "hash": "d4fb1d990659"
    },
    "grade": {
     "grade": "W",
@@ -466,7 +467,8 @@
     "narrative_source": "template",
     "lean_name": "Cobalt Falcons",
     "signals": [],
-    "hash": "34355184fbd8"
+    "lean_side": "home",
+    "hash": "85db44e83388"
    },
    "grade": {
     "grade": "L",
@@ -557,11 +559,12 @@
     "narrative_source": "template",
     "lean_name": "Iron Coast Skaters",
     "signals": [
-     "Northgate Owls rated higher by 61",
-     "Northgate Owls on a back-to-back",
-     "Northgate Owls: 1 out or doubtful"
+     "Away rated higher by 61",
+     "Away on a back-to-back",
+     "Away: 1 out or doubtful"
     ],
-    "hash": "50d7d2d26b69"
+    "lean_side": "home",
+    "hash": "5b740adacd49"
    },
    "grade": {
     "grade": "W",
@@ -652,11 +655,12 @@
     "narrative_source": "template",
     "lean_name": "Harbor City Anglers",
     "signals": [
-     "Harbor City Anglers rated higher by 104",
-     "Lakeview Herons on a back-to-back",
-     "Lakeview Herons: 1 out or doubtful"
+     "Home rated higher by 104",
+     "Away on a back-to-back",
+     "Away: 1 out or doubtful"
     ],
-    "hash": "ca54df2ff1dd"
+    "lean_side": "home",
+    "hash": "8c1f1dce09fe"
    },
    "grade": {
     "grade": "W",
@@ -747,10 +751,11 @@
     "narrative_source": "template",
     "lean_name": "Prairie Foxes",
     "signals": [
-     "Prairie Foxes rated higher by 68",
-     "Glacier Kings on a back-to-back"
+     "Home rated higher by 68",
+     "Away on a back-to-back"
     ],
-    "hash": "bdc6a13036d0"
+    "lean_side": "home",
+    "hash": "f568a0e488d4"
    },
    "grade": {
     "grade": "V",
@@ -841,9 +846,10 @@
     "narrative_source": "template",
     "lean_name": "Ridge Bears",
     "signals": [
-     "Ridge Bears rated higher by 132"
+     "Home rated higher by 132"
     ],
-    "hash": "d8b17b073c22"
+    "lean_side": "home",
+    "hash": "9f82450c0fcf"
    },
    "grade": null,
    "missed": false
@@ -928,11 +934,12 @@
     "narrative_source": "template",
     "lean_name": "Westfield Foxes",
     "signals": [
-     "Westfield Foxes rated higher by 104",
-     "Pine Valley Rams on a back-to-back",
-     "Pine Valley Rams: 1 out or doubtful"
+     "Home rated higher by 104",
+     "Away on a back-to-back",
+     "Away: 1 out or doubtful"
     ],
-    "hash": "cc1747fe3f85"
+    "lean_side": "home",
+    "hash": "a4f115ff790c"
    },
    "grade": null,
    "missed": false
@@ -1017,11 +1024,12 @@
     "narrative_source": "template",
     "lean_name": "Sunset Lions",
     "signals": [
-     "Sunset Lions rated higher by 158",
-     "Sunset Lions on a back-to-back",
-     "Sunset Lions 4-1 in its last 5"
+     "Away rated higher by 158",
+     "Away on a back-to-back",
+     "Away 4-1 in its last 5"
     ],
-    "hash": "7ba844c177c0"
+    "lean_side": "away",
+    "hash": "d5b1d516caa6"
    },
    "grade": null,
    "missed": false
@@ -1065,8 +1073,8 @@
      "risk": "Fighter styles, reach, layoffs and weight cuts are not connected, so this bout has no real analysis.",
      "thesis": [
       "No usable market line, so there is nothing to price against.",
-      "No usable market line, so there is nothing to price against.",
-      "Coverage 0.0% of critical inputs, and no bet is recorded."
+      "Fighter styles, reach, layoffs and weight cuts are not connected, so this bout has no real analysis.",
+      "No bet is recorded for this game."
      ]
     },
     "reason": "No usable market line, so there is nothing to price against.",
@@ -1112,7 +1120,8 @@
     "narrative_source": "template",
     "lean_name": null,
     "signals": [],
-    "hash": "496b2f6180fb"
+    "lean_side": null,
+    "hash": "ace458404069"
    },
    "grade": null,
    "missed": false
@@ -1174,8 +1183,8 @@
      "risk": "Fighter styles, reach, layoffs and weight cuts are not connected, so this bout has no real analysis.",
      "thesis": [
       "No usable market line, so there is nothing to price against.",
-      "No usable market line, so there is nothing to price against.",
-      "Coverage 0.0% of critical inputs, and no bet is recorded."
+      "Fighter styles, reach, layoffs and weight cuts are not connected, so this bout has no real analysis.",
+      "No bet is recorded for this game."
      ]
     },
     "reason": "No usable market line, so there is nothing to price against.",
@@ -1221,7 +1230,8 @@
     "narrative_source": "template",
     "lean_name": null,
     "signals": [],
-    "hash": "de9bb2402b89"
+    "lean_side": null,
+    "hash": "7e4f9017d4f3"
    },
    "grade": null,
    "missed": false
@@ -1265,8 +1275,8 @@
      "risk": "Fighter styles, reach, layoffs and weight cuts are not connected, so this bout has no real analysis.",
      "thesis": [
       "No usable market line, so there is nothing to price against.",
-      "No usable market line, so there is nothing to price against.",
-      "Coverage 0.0% of critical inputs, and no bet is recorded."
+      "Fighter styles, reach, layoffs and weight cuts are not connected, so this bout has no real analysis.",
+      "No bet is recorded for this game."
      ]
     },
     "reason": "No usable market line, so there is nothing to price against.",
@@ -1312,7 +1322,8 @@
     "narrative_source": "template",
     "lean_name": null,
     "signals": [],
-    "hash": "e2b8099fdcfe"
+    "lean_side": null,
+    "hash": "cedc379373c8"
    },
    "grade": null,
    "missed": false
@@ -1351,7 +1362,7 @@
     "narrative": {
      "context": "Fight-camp context (layoff, weight cut, short notice) is unavailable.",
      "market": "Moneyline: Marcus Vale -180, Bruno Keane +150 at Demo Book. No-vig chance: Marcus Vale 61.6%, Bruno Keane 38.4% (vig 4.3%).",
-     "matchup": "Fighter statistics are not connected, so this bout has no matchup analysis.",
+     "matchup": "Fighter statistics are not connected, so this bout is shown with the market only and has no matchup analysis.",
      "projection": "The team rating is unavailable, so the model equals the market. Side with the most value, Marcus Vale: model 61.6% vs market 61.6%, edge 0.0%, fair price -161 vs quoted -180.",
      "risk": "Fighter styles, reach, layoffs and weight cuts are not connected, so this bout has no real analysis.",
      "thesis": [
@@ -1402,7 +1413,8 @@
     "narrative_source": "template",
     "lean_name": "Marcus Vale",
     "signals": [],
-    "hash": "1c15abb8847e"
+    "lean_side": "home",
+    "hash": "8e57cfeef364"
    },
    "grade": null,
    "missed": false
@@ -1467,7 +1479,7 @@
   },
   "backtest": {},
   "integrations": {
-   "version": "0.3.1",
+   "version": "0.3.4",
    "generated_utc": "2026-11-16T03:45:00Z",
    "items": [
     {
@@ -1540,7 +1552,13 @@
      "group": "Data",
      "name": "Finished games stored",
      "state": "warn",
-     "detail": "NBA 97, NHL 73, NFL 50, MLB 0. Ratings need history: run the backfill task."
+     "detail": "NBA 97, NHL 73, NFL 50, MLB 0. Too few for ratings in NFL, NBA, NHL: the updater loads more history by itself, or run the backfill task."
+    },
+    {
+     "group": "Data",
+     "name": "History load",
+     "state": "idle",
+     "detail": "Not started. It starts by itself on the next update, or run the backfill task."
     },
     {
      "group": "Data",
@@ -1564,7 +1582,7 @@
      "group": "System",
      "name": "Pipeline version",
      "state": "info",
-     "detail": "0.3.1"
+     "detail": "0.3.4"
     }
    ]
   },

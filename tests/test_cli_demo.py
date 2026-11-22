@@ -61,3 +61,18 @@ def test_ledger_command_uses_the_configured_folder_never_the_repo_data(tmp_path)
     cli.main(["tick", "--now", (start - timedelta(minutes=30)).isoformat()], source=src, env=env)
     assert cli.main(["ledger", "--now", (start - timedelta(minutes=20)).isoformat()], source=src, env=env) == 0
     assert list((tmp_path / "ledger").glob("*.ndjson")) and cli.main(["verify"], env=env) == 0
+
+
+def test_tick_loads_history_by_itself_while_it_is_thin_then_stops(tmp_path):
+    from test_oddsapi_backfill import RangeSrc
+    env = {"PICKS_DB": str(tmp_path / "p.db")}
+    src = RangeSrc([game("old", T0 - timedelta(days=9), status="final", winner="home", home_score=100, away_score=90)])
+    cli.main(["tick", "--now", T0.isoformat()], source=src, env=env)
+    first = len(src.ranges)
+    assert first > 0                                                     # thin history: the tick started loading it
+    cli.main(["tick", "--now", (T0 + timedelta(minutes=5)).isoformat()], source=src, env=env)
+    assert len(src.ranges) == first                                      # not again within 20 minutes
+    st = store.connect(env)
+    assert pipeline.get_snapshot(st, "backfill_complete")["days"] == 240
+    cli.main(["tick", "--now", (T0 + timedelta(hours=3)).isoformat()], source=src, env=env)
+    assert len(src.ranges) == first                                      # complete: no more loading for a day

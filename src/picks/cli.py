@@ -58,6 +58,24 @@ def housekeeping(st, source, cfg, now):
     return ran, (lg is None or (now - lg) > timedelta(minutes=40))
 
 
+def history_thin(st, cfg):
+    counts = {r["sport"]: r["n"] for r in st.q("SELECT sport, COUNT(*) AS n FROM games WHERE status = 'final' GROUP BY sport")}
+    return any(counts.get(s, 0) < need for s, need in cfg["model"].get("min_history", {}).items())
+
+
+def maybe_backfill(st, source, cfg, now):
+    """Ratings need history. If it is thin, load a few minutes' worth per tick until it is complete (resumable)."""
+    done = pipeline.get_snapshot(st, "backfill_complete", None)
+    if done and (now - parse_utc(done["at"])) < timedelta(hours=24):
+        return False
+    last = last_run(st, "backfill")
+    if not history_thin(st, cfg) or (last and (now - last) < timedelta(minutes=20)):
+        return False
+    pipeline.run_backfill(st, source, cfg, now, days=240, budget_minutes=3)
+    pipeline.put_snapshot(st, "backtest", backtest.run(st, cfg), now)
+    return True
+
+
 def main(argv=None, source=None, env=None):
     ap = argparse.ArgumentParser(prog="picks", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("cmd", choices=["migrate", "schedule", "tick", "grade", "ledger", "verify", "backfill", "backtest", "demo"])
@@ -96,6 +114,8 @@ def main(argv=None, source=None, env=None):
         if grade_due:
             pipeline.run_grade(st, source, cfg, now)
             ran.append("grade")
+        if maybe_backfill(st, source, cfg, now):
+            ran.append("backfill")
         out["also_ran"] = ran
     elif args.cmd == "backfill":
         out = pipeline.run_backfill(st, source, cfg, now, args.days, args.budget)

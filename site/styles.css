@@ -66,6 +66,10 @@ main { margin-top: var(--s5); }
 .group + .group { margin-top: var(--s6); }
 .group h2 { font-size: var(--t-s); font-weight: 600; color: var(--muted); margin-bottom: var(--s1); }
 .group h2 .note { font-weight: 400; margin-left: var(--s2); }
+.bare summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; color: var(--muted); font-weight: 600; font-size: var(--t-s); list-style: none; }
+.bare summary::-webkit-details-marker { display: none; }
+.bare summary::after { content: "Show"; margin-left: auto; color: var(--accent); font-weight: 600; }
+.bare[open] summary::after { content: "Hide"; }
 .enter { animation: enter 180ms var(--ease); }
 @keyframes enter { from { opacity: 0; transform: translateY(4px); } }
 

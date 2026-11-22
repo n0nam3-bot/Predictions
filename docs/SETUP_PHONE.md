@@ -64,7 +64,7 @@ Everything below works in your phone’s browser. After this, every change is a 
 
 13. **Odds.** Run the `audit` task and open the **ESPN scoreboard** rows. The Notes column ends with “N with moneyline”. If N is above zero for the sports in season, the odds come free from ESPN and you need nothing else.
     If it is zero, get a free key at the-odds-api.com (no card, 500 credits a month) and add it as the secret `ODDS_API_KEY`. It is used only for games ESPN has no moneyline for, at most once per sport every 20 minutes, and never past 85% of the month.
-14. **History.** Run the `backfill` task (default 240 days, takes a few minutes). Ratings, rest, recent form and the date picker all read stored games, and a team needs 8 stored games before it is rated. It also runs the **Rating check** shown on the Status panel.
+14. **History.** The updater now loads history by itself, a few minutes per update, until every league has enough (the Status panel shows “History load”). To speed it up, run the `backfill` task (default 240 days). Ratings, rest, recent form and the date picker all read stored games, and a team needs 8 stored games before it is rated. It also runs the **Rating check** shown on the Status panel.
 15. **Injuries.** The audit’s **ESPN injuries** rows must say rows greater than zero. If they fail, injuries stay unavailable and every game is a PASS (coverage cannot reach 80%).
 16. **Text.** An LLM key is optional. Without one, analysis text comes from the built-in template.
 17. **Then wait one slate.** Open the site, pick a past date with the date control, and check games against the real result. Do not trust a PLAY until the record has a few hundred graded plays.
