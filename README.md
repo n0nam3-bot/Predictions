@@ -1,5 +1,7 @@
 # Pre-game picks board
 
+**New chat or contributor? Read [`docs/HANDOFF.md`](docs/HANDOFF.md) first.** It is the living record of how everything works, the roadmap and the known issues.
+
 A free, self-updating site that posts pre-game analysis for MLB, NFL, NBA, NHL, UFC and DWCS about 30 minutes before each team game and 90 minutes before the first bout of a card, grades every pick, and keeps a public win-loss-void record. No visitor ever clicks “run”.
 
 How it fits together (all free tiers):
