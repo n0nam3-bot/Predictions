@@ -5,9 +5,9 @@ This file is the single source of truth for how the project works, what is broke
 | | |
 |---|---|
 | Repo | https://github.com/n0nam3-bot/Predictions (public, branch `main`) |
-| Code version | 0.3.4 (`src/picks/__init__.py` and `SITE_VERSION` in `site/app.js`; keep them equal by hand, no test enforces it) |
-| Doc verified | 2026-11-23 against commit `5783ff1` |
-| Live site URL | not recorded yet: ask the owner once, then write it here (section 11) |
+| Code version | 0.3.5 (`src/picks/__init__.py` and `SITE_VERSION` in `site/app.js`; keep them equal by hand, no test enforces it) |
+| Doc verified | 2026-11-23 against commit `a5f27a1` plus the v0.3.5 changes shipped in the same zip |
+| Live site URL | https://predictions-beta.vercel.app/ |
 | Owner | GitHub user `n0nam3-bot`, works from a phone |
 
 Evidence tags used below: **[verified]** observed in the repo, the committed ledger or the test run on 2026-11-23. **[inferred]** concluded from reading code, not observed. **[owner]** stated by the owner in chat.
@@ -18,14 +18,14 @@ Evidence tags used below: **[verified]** observed in the repo, the committed led
 
 **How it runs.** GitHub Actions is the clock (`Pipeline` workflow). Turso (free SQLite over HTTPS) is the database. Vercel serves `site/` and a read-only API in `api/`. Every change ships as one zip uploaded to the repo from a phone; the `Inbox` workflow unzips it, runs the tests and commits it.
 
-**Where it stands (evidence: committed ledger, 2026-11-17 to 2026-11-22).**
-- The machine works [verified]: 112 picks posted on time, the hash chain is intact, 146 Python and 16 Node tests pass.
-- It has never produced a PLAY [verified]: 112 of 112 are PASS, 0 graded, record 0-0-0, 0 top picks.
-- **Blocker 1:** team ratings are unavailable because the production database holds only about 5 to 7 games per team (8 are needed). That caps coverage at 75%, under the 85% required, so every team pick is a forced PASS. History did not grow even in the 7 hours after v0.3.4 shipped. Cause unknown. See P0-1.
-- **Blocker 2 (wording only):** AI text never succeeded: Gemini returned 404, then 503 and timeouts. All text is the built-in template. See P0-2.
+**Where it stands (owner's Status panel and the committed ledger, 2026-11-23).**
+- The machine works [verified]: the updater runs every few minutes, 130 picks are stored, and the 112 in the committed ledger all posted on time (team picks 29.5 to 29.7 minutes before start), the hash chain is intact, ESPN game feeds work 5 of 5 and injury feeds 4 of 4, and 155 Python plus 16 Node tests pass.
+- It has never produced a PLAY [verified]: every pick is PASS, 0 graded, record 0-0-0, 0 top picks.
+- **Blocker 1, root cause found [verified]:** ESPN answers the 30-day date-range scoreboard request with HTTP 400 for NFL, NBA and NHL (MLB's works). History therefore never loaded there: stored finals were NBA 104, NHL 96, NFL 27 against MLB 2,457. With under 8 games per team there are no ratings, coverage stops at 75% (85% is required), and every team pick is a forced PASS. **v0.3.5 fixes it** by falling back to one request per day (four at once) and puts per-sport progress and errors on the Status panel. Not yet confirmed in production: see P0-1 for the check.
+- **Blocker 2 (wording only):** AI text never succeeded. Gemini is the only provider set up and returns HTTP 503 "high demand" or times out, so all text is the built-in template. See P0-2.
 - UFC and DWCS post empty PASS rows: no odds in the ESPN feed and no fighter data. See P1-3.
 
-**First moves in a new chat.** Do section 1. If the task touches production, ask the owner for the Status panel text (section 10.7). Unless told otherwise, the next task is roadmap item R0.1: get history loading and prove it.
+**First moves in a new chat.** Do section 1. Then find out whether v0.3.5 is live: ask for the Status panel (Pipeline version 0.3.5, History load Complete, finished games NBA and NHL at least 150 each, NFL at least 100). If not, work P0-1. If yes, the next task is roadmap R0.3 (shadow grading) unless the owner picks something else.
 
 ## 1. Start-up protocol for Claude
 
@@ -52,17 +52,17 @@ Evidence tags used below: **[verified]** observed in the repo, the committed led
 | # | Requirement [owner] | Status | Notes |
 |---|---|---|---|
 | R1 | Public repo that auto-pulls free data and shows analytics and predictions to every visitor, no click-to-run | Met | Actions, Turso, Vercel. The site polls `/api/latest` every 60 s. |
-| R2 | The whole project costs $0 | Met, watch | Vercel Hobby (non-commercial), Turso free limits (unverified), Odds API 500 credits a month. |
+| R2 | The whole project costs $0 | Met, watch | Vercel Hobby (non-commercial), Turso free limits (unverified), Odds API 500 credits a month (key is set, never called yet). |
 | R3 | Team-game analysis posted within 30 minutes of start | Met [verified] | 43 of 43 picks since v0.3.2 posted 29.5 to 29.7 minutes before start. None LATE. |
 | R4 | MMA analysis posted 1h30m before the first bout | Timing met, content empty | The UFC card posted 94.7 min before the first bout (`due_minutes: 95`). No odds, no fighter data. |
 | R5 | Highlight top-rated predictions | Built, never exercised | Top Pick: edge at least 4%, coverage at least 95%, max 5 per ET day. 0 so far. |
 | R6 | Daily win-loss-void record plus overall record since release | Built, empty | 0 graded picks yet. |
 | R7 | Sport filter, default all | Met | Tabs; last choice remembered in `localStorage`; deep link `#s=nba`. |
 | R8 | Extremely accurate analysis that reflects the actual truth: styles, matchups, past faceoffs, streaks, injuries, schedules, travel and rest, anything else worth considering | **Partial** | Have: market, Elo ratings (need history), rest and back-to-back, last-5 form, injury lists without player impact. Missing: starting goalies and pitchers, quarterback status, lineups, travel, head-to-head, styles, weather, every fighter input. |
-| R9 | Sports: MLB, NFL, NBA, NHL, UFC, DWCS | Partial | NBA, NHL, NFL live. MLB is off-season (never exercised live). UFC rows are empty. No DWCS card seen yet. |
+| R9 | Sports: MLB, NFL, NBA, NHL, UFC, DWCS | Partial | NBA, NHL, NFL live. MLB is off-season (2,457 finals stored, never exercised live). UFC rows are empty. No DWCS card seen yet. |
 | R10 | Analyst logic: no-vig edge, PASS when no edge | Met | Proportional de-vig; edge = model minus no-vig market. |
 | R11 | Zip uploaded from a phone is unzipped into the right folders by an Action | Met | 9 zips applied, 2 failed (fixed by v0.3.2), 1 duplicate skipped. |
-| R12 | Free LLM providers only | Met, not working | Gemini key is set but failing; the other providers appear unset. |
+| R12 | Free LLM providers only | Met, not working | Gemini key is set but failing (HTTP 503). Mistral, Cloudflare and OpenRouter are not set up [verified by Status]. |
 
 ## 4. How everything works
 
@@ -88,7 +88,7 @@ All tasks run `python -m picks.cli <task>` with `PYTHONPATH=src`, then write a s
 - **`schedule`** (cron `7 */3 * * *`): upsert every feed sport's games for ET today minus 7 days to plus 2 days; refresh injuries.
 - **`grade`** (cron `17,47 * * * *`): grade PLAY picks whose game is final.
 - **`ledger`** (cron `35 8 * * *`, 08:35 UTC, about 03:35 ET): export yesterday's and today's (ET) picks and grades to `data/ledger/YYYY-MM-DD.ndjson`, verify chain and files, store the result in snapshot `ledger_check`, and commit `ledger: daily export` as the repo owner.
-- **`backfill`** (manual, `days` default 240): loads finished games in 30-day chunks, newest first, for each feed sport (order: nfl, nba, nhl, mlb, ufc); stops after a 10-minute budget; remembers finished chunks (`backfill_done`); sets `backfill_complete` only when nothing failed; then runs `backtest`.
+- **`backfill`** (manual, `days` default 240; the tick also runs it for up to 3 minutes while stored history is below `model.min_history`): loads finished games in 30-day chunks, newest first, for each feed sport (order: nfl, nba, nhl, mlb, ufc). Per chunk it tries one date-range request; if ESPN refuses it (HTTP 400, which it does for NFL, NBA and NHL) it asks one day at a time, four requests at once, and stays in that mode for the sport's remaining chunks. A chunk counts as loaded only when every day loaded; failed chunks are retried on the next run; a sport whose every day fails is skipped for the run so it cannot hold up the others. It stops after a 10-minute budget, remembers finished chunks (`backfill_done`), writes one Status note per sport (`backfill:<sport>`: chunks loaded, mode, first error), sets `backfill_complete` only when nothing failed, then runs `backtest`.
 - **`backtest`** (manual): walk-forward Elo check per sport (accuracy, log loss, Brier vs a naive home-rate baseline) into snapshot `backtest`. Shown as "Rating check".
 - **`verify`**: hash chain plus database vs ledger files. **`audit`**: probes every free source from Actions and uploads the `audit-samples` artifact. **`setup-check`**: lists missing secrets and the age of the last tick. **`demo`**: rebuilds fictional demo JSON in the runner's temp dir (not committed).
 - **Concurrency:** group `pipeline-<schedule | task | manual>`, `cancel-in-progress: false`, 15-minute timeout. See P1-7.
@@ -113,6 +113,8 @@ Each game gets five inputs. Every one carries `value`, `source`, `fetched_at`, o
 | injuries | 0.20 | ESPN list filtered to Out, Doubtful, Questionable, Day-To-Day (top 6 per team). Long-term injured reserve is counted, not listed. No player value, so the size of an absence is not measured. |
 
 `coverage` = sum of the weights of available inputs. Bouts: ratings, rest and form are permanently unavailable ("fighter data is not connected yet"), and injuries are not fetched for bouts, so bout coverage can never exceed 0.35.
+
+**Ignored games.** Events whose ESPN season type is 1 (preseason) or 4 (off-season), or whose season slug says so, are dropped when a scoreboard is parsed: no row, no pick, no rating input (starters rest, so their scores would distort the ratings). Events with no season information are kept. Decided in v0.3.5; the owner may veto.
 
 ### 4.5 Model (`ratings.py`, `model.py`)
 
@@ -159,7 +161,7 @@ Current values: timezone America/New_York; timing team 30/10, mma 95/60; thresho
 
 ### 4.14 Secrets and variables (names only, never values)
 
-- GitHub Actions secrets: `TURSO_URL`, `TURSO_WRITE_TOKEN` (required); `INBOX_PAT` (fine-grained, this repo, Contents and Workflows read/write; probably unset [inferred]); `GEMINI_API_KEY` (set [verified by attempts]); `MISTRAL_API_KEY`, `OPENROUTER_API_KEY`, `CLOUDFLARE_AI` (`ACCOUNT_ID:API_TOKEN`), `ODDS_API_KEY` (apparently unset [inferred from UFC having no odds]). Variable: `SITE_URL`.
+- GitHub Actions secrets: `TURSO_URL`, `TURSO_WRITE_TOKEN` (required); `INBOX_PAT` (fine-grained, this repo, Contents and Workflows read/write; probably unset [inferred]); `GEMINI_API_KEY` (set, failing [verified by Status]); `ODDS_API_KEY` (set, never called yet because ESPN supplies the odds [verified by Status]); `MISTRAL_API_KEY`, `OPENROUTER_API_KEY`, `CLOUDFLARE_AI` (`ACCOUNT_ID:API_TOKEN`) (not set up [verified by Status]). Variable: `SITE_URL`.
 - Vercel environment: `TURSO_URL`, `TURSO_READ_TOKEN` (read-only token).
 - The external timer has its own token (Actions read and write on this repo only).
 
@@ -180,52 +182,50 @@ site/                            index.html, app.js, styles.css, demo/latest.jso
 src/picks/                       cli, pipeline, store, ledger, timing, facts, ratings, model, decide, market,
                                  grading, records, narrative, llm, validator, status, backtest, demo, config,
                                  sources/espn.py, sources/oddsapi.py
-tests/                           13 pytest files (146 tests), tests/api/*.test.mjs (16 Node tests), fake_turso.py
+tests/                           15 pytest files (155 tests), tests/api/*.test.mjs (16 Node tests), fake_turso.py
 vercel.json, package.json        deploy config (package.json version 0.1.0 is stale, P2-1)
 ```
 
 ## 5. Current state (evidence as of 2026-11-23)
 
-- **Code:** v0.3.4, HEAD `5783ff1`. `scripts/ci.sh` passes: 146 pytest and 16 Node tests [verified]. The committed `inbox.yml` is byte-identical to the generator's output [verified]. The live `pipeline.yml` is the v0.3 version (has the `backtest` task and the 240-day default); the copies in `inbox/needs-manual/` are obsolete [verified].
-- **Inbox history [verified]:** applied v0.1, v0.1.1-vercel-fix, v0.2.0, v0.2.1, v0.2.2, v0.2.3, v0.3.2, v0.3.3, v0.3.4. Failed v0.3.0 and v0.3.1 (lesson 1). One duplicate skipped.
-- **Picks 2026-11-17 to 2026-11-22 [verified]:** 112 total: NHL 45, NBA 43, NFL 12, UFC 12 (one card on 11-21), MLB 0, DWCS 0. All PASS, all ON_TIME. 0 grades, 0 top picks.
+- **Code:** v0.3.5 (zip delivered 2026-11-23). Before it, v0.3.4 at commit `a5f27a1`. `scripts/ci.sh` passes: 155 pytest and 16 Node tests [verified]. The committed `inbox.yml` is byte-identical to the generator's output [verified]. The live `pipeline.yml` is the v0.3 version; the copies in `inbox/needs-manual/` are obsolete [verified].
+- **Inbox history [verified]:** applied v0.1, v0.1.1-vercel-fix, v0.2.0 to v0.2.3, v0.3.2, v0.3.3, v0.3.4, and the docs zip that added this file (2026-11-24 03:37Z). Failed v0.3.0 and v0.3.1 (lesson 1). One duplicate skipped.
+- **Status panel before v0.3.5 [verified, the owner's copy]:** Updater working, last ran 0 min ago; last pick 64 min ago. ESPN odds working (8 of 8 upcoming games had a moneyline). The Odds API: key set, never called. Gemini failing (HTTP 503); Mistral, Cloudflare and OpenRouter not set up. Game feeds 5 of 5, injury feeds 4 of 4. **Finished games stored: NBA 104, NHL 96, NFL 27, MLB 2,457. History load failing: HTTP 400 on the NFL range URL `.../football/nfl/scoreboard?dates=20260328-20260426&limit=1000`, and NBA the same.** Rating check: MLB 53.9% of 2,332 winners, log loss 0.6902 against 0.6933 naive (a results-only rating barely beats the home-win rate, so it is not a market-beating signal). Ledger clean. Database: 3,221 games and 130 picks. Pipeline and website 0.3.4, deployed commit `eb3cd5b`.
+- **Picks 2026-11-17 to 2026-11-22 [verified from the ledger]:** 112 total: NHL 45, NBA 43, NFL 12, UFC 12 (one card on 11-21), MLB 0, DWCS 0. All PASS, all ON_TIME. 0 grades, 0 top picks.
   - 57 picks (11-17 to 11-20, old model, coverage 1.00): PASS because edge was under 2.5%. Edges ranged from -0.83% to +1.54%, median 0.12%.
   - 43 team picks since v0.3.2: PASS because coverage was 0.75 (39) or 0.55 (4); ratings unavailable; model equals market, edge exactly 0.
   - 12 UFC picks: coverage 0.00, no moneyline in the feed.
-- **Proven in production [verified]:** ESPN scoreboards, moneylines and injuries for NBA, NHL, NFL; T-30 timing; hash-chain export; daily ledger commits; Vercel serving. **Never observed:** MLB, DWCS, UFC odds, any grade, any PLAY, any top pick, a successful LLM call.
-- **Not visible from the sandbox (ask the owner when needed):** the Status panel, whether `backfill` has been run since 11-22, which secrets are set, the cron-job.org schedule, Actions failures, the live site URL.
+- **Proven in production [verified]:** ESPN scoreboards (one request per day), moneylines and injuries for NBA, NHL, NFL; ESPN date ranges for MLB; T-30 timing; hash-chain export; daily ledger commits; Vercel serving. **Refused by ESPN:** date ranges for NFL, NBA, NHL (HTTP 400). **Never observed:** DWCS, UFC odds, any grade, any PLAY, any top pick, a successful LLM call, a call to The Odds API.
+- **Simulated, not live [verified in a sandbox]:** against a local stand-in that refuses ranges for NFL, NBA and NHL and sends occasional 503s, the v0.3.5 history load finished in seconds, retried the 503s, ignored preseason and summer-league games, and the next picks showed coverage 1.00 with non-zero edges. Before the load the same stand-in gave coverage 0.75, 0.75 and 0.55, exactly what production showed. Real ESPN may still differ.
+- **Not visible from the sandbox (ask the owner when needed):** the live Status panel, Actions failures, the cron-job.org schedule.
 
 ## 6. Known issues
 
 ### P0: blockers
 
-**P0-1. History is not loaded, so no team pick can reach PLAY** [symptom verified, cause unknown]
-- Evidence: since v0.3.2 every NBA and NHL pick has coverage 0.75 and the missing input is ratings ("needs 8 stored games per team (home has 5, away has 5)"). NFL teams show 0 to 2 stored games. The counts did not grow after v0.3.4 (which added `min_history`, the threshold that makes the tick load history by itself) was applied at 2026-11-22T17:57Z: the last picks, up to 2026-11-23T01:00Z, still show 5 to 7 (NBA, NHL) and 0 to 2 (NFL). Those are the counts the 7-day schedule refresh alone would store, so no backfill data has landed.
-- Why it blocks everything: with ratings missing, coverage tops out at 0.75 (under 0.85) and the model equals the market.
-- Hypotheses [inferred], check in this order:
-  - H1 Head-of-line blocking: `run_backfill` walks sports in config order, newest chunk first, and retries failed chunks first on every run. If an early chunk keeps timing out (30 s x 2 attempts), the 3-minute per-tick budget is spent there and later sports are never reached.
-  - H2 ESPN's date-range scoreboard (`dates=YYYYMMDD-YYYYMMDD&limit=1000`) behaves differently than the parser expects for a 30-day span (cap, partial, HTTP 400). It has never been checked against a real response.
-  - H3 `maybe_backfill` is not reached or raises after publishing (that would turn the tick run red but keep the picks).
-  - H4 Turso rejects the bulk upsert (60 statements per request).
-- Diagnose (owner, phone): site, Status, Data section: read "Finished games stored", "History load" (prints `Problems:` with the error text) and "Rating check". Then Actions, Pipeline, Run workflow, task `backfill`, days `240`; open the run and paste its summary plus any `backfill ... FAILED` lines.
-- Fix direction: round-robin the sports so one failure cannot starve the others; remember failed chunks with a retry limit; smaller chunks if ranges misbehave; show per-chunk errors in the Status panel; add a real captured ESPN range response to `fixtures/` with a test.
-- Done when: Status shows finished games at or above `min_history` for NBA, NHL and NFL, and the following day's team picks show coverage at or above 0.85 in the ledger.
+**P0-1. History not loaded, so no team pick can reach PLAY** [root cause verified; fix shipped in v0.3.5, not yet confirmed live]
+- Cause: ESPN answers the 30-day date-range scoreboard request (`dates=YYYYMMDD-YYYYMMDD&limit=1000`) with HTTP 400 for NFL, NBA and NHL, while MLB's works. The old `run_backfill` had no fallback, so stored finals stayed at the 7-day schedule window (NBA 104, NHL 96, NFL 27 on the Status panel; MLB 2,457). Ratings need 8 stored games per team, so coverage capped at 0.75 (under 0.85), the model equalled the market, and every team pick was a forced PASS. The earlier hypotheses (head-of-line blocking, parsing, Turso batch size) were wrong: MLB loaded fine.
+- Fix (v0.3.5): per chunk, try one range request; on failure ask one day at a time (four at once, the same call the schedule task makes daily); keep a Status note per sport; skip a sport whose every day fails; ignore preseason and off-season games. Tests: `tests/test_backfill_fallback.py` and `tests/test_espn_http.py`.
+- Confirm (owner, phone): after the Inbox log says applied and Status shows Pipeline version 0.3.5, wait about 20 minutes for the tick to load history, or run Actions, Pipeline, `backfill`, days `240`. Then Status, Data section: "History load" says Complete; "Finished games stored" shows NBA and NHL at least 150 each and NFL at least 100; and the next day's ledger picks show coverage 1.00 for NBA, NHL and NFL.
+- If it still fails: read the per-sport line ("N of 8 chunks loaded (day by day); K failing, first: <date>: <error>"). HTTP 400 on single days would mean ESPN refuses past dates too. 429 or 403 would mean rate limiting: lower `workers` in `ESPNSource.fetch_days`.
+- Done when: those three conditions hold in the live Status panel and ledger.
 
 **P0-2. AI text never succeeds** [verified]
-- Evidence: all 112 picks have `narrative_source: template`. Gemini attempts began 2026-11-21T17:30Z: 28 picks logged `HTTP 404` (model `gemini-2.5-flash`); v0.3.4 switched the model to the alias `gemini-flash-latest`, the 404s stopped, and the next 15 picks logged `HTTP 503` high demand (11) or a read timeout (4). Zero successes. No other provider appears to be configured.
+- Evidence: all picks have `narrative_source: template`. Gemini attempts began 2026-11-21T17:30Z: 28 picks logged `HTTP 404` (model `gemini-2.5-flash`); v0.3.4 switched the model to the alias `gemini-flash-latest`, the 404s stopped, and the next 15 picks logged `HTTP 503` high demand (11) or a read timeout (4). The Status panel still shows Gemini failing with the 503 text. Mistral, Cloudflare and OpenRouter are "Not set up" [verified by Status], so the chain has no fallback.
 - Impact: wording only (numbers never come from the LLM). Each failed call can add up to 40 s to a tick.
-- Fix direction: one retry with short backoff on 503 and timeouts; a shorter timeout (about 15 s); a circuit breaker that skips a failing provider for 30 minutes; a second free provider key (Mistral) so the chain has a fallback. Done when: Status "AI text" shows a provider as Working and most picks are not `template`.
+- Owner step that helps at once: add a free `MISTRAL_API_KEY` as a GitHub Actions secret (repo Settings, Secrets and variables, Actions) so the chain has a second provider.
+- Fix direction (code): one retry with short backoff on 503 and timeouts; a shorter timeout (about 15 s); a circuit breaker that skips a failing provider for 30 minutes. Done when: Status "AI text" shows a provider as Working and most picks are not `template`.
 
 ### P1: correctness and risk
 
 **P1-3. UFC and DWCS can never PLAY** [verified]
-- The one UFC card seen (2026-11-21, 12 bouts) posted with coverage 0.00: "no moneyline in the feed for this game". Even with odds, bout coverage tops out at 0.35. No DWCS card has appeared. `ODDS_API_KEY` is probably unset [inferred], so the fallback never ran. See R2.x. Owner decision pending: keep showing empty PASS rows for bouts or hide bouts until real analysis exists.
+- The one UFC card seen (2026-11-21, 12 bouts) posted with coverage 0.00: "no moneyline in the feed for this game". Even with odds, bout coverage tops out at 0.35. No DWCS card has appeared. `ODDS_API_KEY` is set but has never been called (Status: "Not needed so far because ESPN supplies the odds"), and it may not have been set on 11-21, so whether the fallback finds UFC odds is unknown; the next UFC card will show it. See R2.x. Owner decision pending: keep showing empty PASS rows for bouts or hide bouts until real analysis exists.
 
 **P1-4. Nothing involving a PLAY has run on live data** [verified]
 - Grading, records, top picks, units, closing-line value and the Plays group are covered by unit tests and the demo only (0 grade lines exist). Expect surprises on the first real PLAY: watch the next two `grade` runs and the record cards closely.
 
 **P1-5. The model has no real edge source** [verified numbers, inferred conclusion]
-- v0.3.x blends only 25% of a results-only Elo rating toward a market that already knows goalies, lineups and news. Under the old model, 57 full-coverage picks never reached the 2.5% edge. Even with history loaded, PLAYs will be rare to nonexistent. That is by design, but it does not meet the owner's goal of accurate, highlighted picks. See R0.3 and Phase 1.
+- v0.3.x blends only 25% of a results-only Elo rating toward a market that already knows goalies, lineups and news. Under the old model, 57 full-coverage picks never reached the 2.5% edge. The Status "Rating check" for MLB (2,332 games) shows 53.9% accuracy and log loss 0.6902 against 0.6933 naive, so a results-only rating has almost no skill by itself. Even with history loaded, PLAYs will be rare to nonexistent. That is by design, but it does not meet the owner's goal of accurate, highlighted picks. See R0.3 and Phase 1.
 
 **P1-6. Stale data can look fresh** [inferred]
 - `facts.build_packet` stamps `fetched_at` with the current time for market and injuries, but the values can be older: the injuries snapshot is only replaced when the feed returns data (a failed or empty fetch keeps the old list), and odds persist via `COALESCE(excluded.odds_json, games.odds_json)`. A pick can be priced on old odds or injuries while claiming full coverage. Fix: store each input's true timestamp, set max ages (for example odds under 15 minutes, injuries under 6 hours at publish), and treat older data as unavailable.
@@ -251,10 +251,10 @@ vercel.json, package.json        deploy config (package.json version 0.1.0 is st
 Order is a proposal unless marked [owner]; the owner decides priorities. Each item has a "done when".
 
 ### Phase 0: unblock the first real PLAY
-- **R0.1 Get history loading and prove it.** Diagnose per P0-1, fix `run_backfill`, run it, confirm in Status. Done when: finished games stored are at or above `min_history` (NBA 150, NHL 150, NFL 100) and ledger picks show coverage at or above 0.85.
-- **R0.2 Show backfill failures on-screen.** Status "History load" lists the per-sport, per-chunk error text; the Actions summary prints it too.
+- **R0.1 Get history loading and prove it.** Shipped in v0.3.5; confirm per P0-1. Done when: finished games stored are at or above `min_history` (NBA 150, NHL 150, NFL 100) and ledger picks show coverage at or above 0.85.
+- **R0.2 Show backfill failures on-screen.** Shipped in v0.3.5: the Status "History load" lists each sport's chunks loaded, mode and first error; the Actions summary prints the same per-sport data.
 - **R0.3 Shadow-grade every PASS lean.** Store the lean side's would-be result in a separate table that never touches the official W-L-V, so model skill (accuracy, log loss vs market, closing-line value) can be measured without waiting for PLAYs. Done when: Status shows these over at least a few hundred games.
-- **R0.4 Fix or replace Gemini** (P0-2) and add a second free provider.
+- **R0.4 Fix or replace Gemini** (P0-2): the owner adds a free `MISTRAL_API_KEY`; code adds retry, a shorter timeout and a circuit breaker.
 
 ### Phase 1: make picks meaningful [owner: "extremely accurate, reflecting actual truth"]
 - R1.1 Freshness guards (P1-6) and one-writer concurrency (P1-7).
@@ -286,6 +286,8 @@ Order is a proposal unless marked [owner]; the owner decides priorities. Each it
 - Nothing is posted after the scheduled start; such games are flagged missed and excluded.
 - Day boundaries and "today" use America/New_York.
 - Workflow files change only by manual paste unless `INBOX_PAT` is set.
+- History loads one request per day (four at once) wherever ESPN refuses date ranges (v0.3.5).
+- Preseason and off-season games are ignored: no row, no pick, no rating input (v0.3.5; the owner may veto).
 
 ## 9. Lessons learned (do not repeat)
 
@@ -297,6 +299,9 @@ Order is a proposal unless marked [owner]; the owner decides priorities. Each it
 6. **GitHub's own cron is unreliable;** the external timer is required (`docs/RELIABLE_CLOCK.md`). It works: since v0.3.2, 43 of 43 team picks posted within 0.5 minutes of T-30.
 7. **Never run `scripts/build_inbox_yml.py` casually, not even with `--help`:** it overwrites `inbox.yml`. Restore with `git checkout -- .github/workflows/inbox.yml` if that happens by accident.
 8. **The owner cannot open a console:** every failure needs on-screen text (Status panel, Inbox log, run summary).
+9. **Do not assume one league's endpoint behaviour holds for another.** ESPN's date-range scoreboard works for MLB but returns HTTP 400 for NFL, NBA and NHL; synthetic fixtures could not show that. After any new request shape, read the Status panel and the `audit` artifact league by league.
+10. **A local stand-in server is the next best thing to live data.** `tests/test_espn_http.py` runs the real `requests` stack against a local server that refuses ranges and sends 503s the way production did. Extend it whenever production surprises you.
+11. **Patching `time.sleep` on the shared `time` module recurses forever if the original is not captured first.** In tests use pytest's `monkeypatch`.
 
 ## 10. Recipes
 
@@ -326,7 +331,7 @@ Add it to `config.yaml` (`sports`, `model.elo`, coverage), `SPORT_ORDER` in `pip
 
 ### 10.7 Read production state from a phone
 - Site, Status panel (groups: Updates, Odds, AI text, Data, System, Website).
-- `<site>/api/health` (deployed commit, database ok, snapshot age) and `<site>/api/latest`.
+- https://predictions-beta.vercel.app/api/health (deployed commit, database ok, snapshot age) and /api/latest.
 - Actions, Pipeline, newest run, Summary (JSON result of the task).
 - Issues, `Inbox log`.
 - `data/ledger/*.ndjson` in the repo (picks and grades, one day behind).
@@ -335,13 +340,16 @@ Add it to `config.yaml` (`sports`, `model.elo`, coverage), `SPORT_ORDER` in `pip
 ### 10.8 Keep this file true
 Never paste secrets. Do not copy this file into Claude Project knowledge: a copy goes stale, so always clone the repo and read `docs/HANDOFF.md` from it.
 
+### 10.9 Test against ESPN behaviour without ESPN
+The sandbox cannot reach espn.com. To reproduce a production behaviour, add it to the local server in `tests/test_espn_http.py` (it serves day and range requests, refuses ranges for NBA, labels preseason games and sends occasional 503s) or to the fake sources in `tests/test_backfill_fallback.py`, then run `bash scripts/ci.sh`.
+
 ## 11. Open questions for the owner
 
-1. What is the live site URL? (Write it into the table at the top.)
-2. Status panel, Data section: what do "Finished games stored", "History load" and "Rating check" say? Has `backfill` been run since 11-22?
-3. Which secrets are set? (`setup-check` shows it.) Is `INBOX_PAT` set? Is `ODDS_API_KEY` set?
-4. How is the cron-job.org timer configured (interval, still active)?
-5. UFC and DWCS: keep showing empty PASS rows, or hide bouts until real analysis exists?
+1. After v0.3.5: does the Status panel show History load Complete and finished games at or above the thresholds (P0-1)?
+2. Add a free `MISTRAL_API_KEY` as a second AI provider (P0-2)?
+3. Is `INBOX_PAT` set? Is the cron-job.org timer still active? (`setup-check` shows secrets and tick age.)
+4. UFC and DWCS: keep showing empty PASS rows, or hide bouts until real analysis exists?
+5. Preseason and off-season games are now ignored (no pick, no rating input). Is that what you want?
 6. Which phase should come first after R0.1? (Proposed: R0.3 shadow grading, then R1.2 goalies.)
 
 ## 12. Keeping this file alive, and the changelog
@@ -358,3 +366,4 @@ At the end of every session that changes anything: bump "Doc verified" (date and
 | 2026-11-21 | v0.3.3 | `vercel.json` ignored-build-step tweak. |
 | 2026-11-22 | v0.3.4 | Gemini model alias, LLM error text, history auto-load when thin (`min_history`), `lean_side`, Status additions. |
 | 2026-11-23 | docs only | Added this handoff file and a pointer in `README.md`. |
+| 2026-11-23 | v0.3.5 | History now loads one day at a time (four at once) when ESPN refuses date ranges, which it does for NFL, NBA and NHL (found from the owner's Status panel: HTTP 400). Status "History load" shows per-sport progress and the first error. Preseason and off-season games are ignored. Shorter ESPN error text. 9 new tests including an HTTP-level one. Docs corrected (DATA_SOURCES, METHODOLOGY, SETUP_PHONE, RUNBOOK). Live site URL recorded. |

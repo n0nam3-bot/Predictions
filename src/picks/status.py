@@ -101,10 +101,15 @@ def compute(store, cfg, now, env):
     bf = {k.split(":")[1]: v for k, v in sources.items() if k.startswith("backfill:") and k.split(":")[1] in live}
     complete = _snap(store, "backfill_complete", None)
     badbf = [f"{k.upper()}: {v['detail']}" for k, v in bf.items() if not v["ok"]]
+    okbf = [f"{k.upper()}: {v['detail']}" for k, v in bf.items() if v["ok"]]
     if complete:
-        add("Data", "History load", "ok" if not badbf else "bad", f"Complete as of {_ago(now, complete['at'])} ({complete['days']} days)." + (" Problems: " + "; ".join(badbf)[:140] if badbf else ""))
+        add("Data", "History load", "ok" if not badbf else "bad",
+            f"Complete as of {_ago(now, complete['at'])} ({complete['days']} days)." + (" Problems: " + "; ".join(badbf)[:400] if badbf else ""))
     elif bf or _snap(store, "backfill_done", []):
-        add("Data", "History load", "bad" if badbf else "warn", ("Problems: " + "; ".join(badbf)[:160]) if badbf else f"In progress: {len(_snap(store, 'backfill_done', []))} chunks loaded. It continues on every update.")
+        if badbf:
+            add("Data", "History load", "bad", ("Problems: " + "; ".join(badbf) + (". Fine: " + "; ".join(okbf) if okbf else ""))[:500])
+        else:
+            add("Data", "History load", "warn", "In progress. " + ("; ".join(okbf)[:400] or f"{len(_snap(store, 'backfill_done', []))} chunks loaded") + ". It continues on every update.")
     else:
         add("Data", "History load", "idle", "Not started. It starts by itself on the next update, or run the backfill task.")
     bt = _snap(store, "backtest", {})

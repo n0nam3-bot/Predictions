@@ -131,49 +131,95 @@ def upsert_games_bulk(store, games, now, batch=60):
     return len(games)
 
 
+CHUNK_DAYS = 30
+
+
+def backfill_chunks(today, days):
+    """(start, end) windows of at most 30 days, newest first, covering the `days` before today."""
+    out, end = [], today - timedelta(days=1)
+    while end > today - timedelta(days=days):
+        start = max(end - timedelta(days=CHUNK_DAYS - 1), today - timedelta(days=days))
+        out.append((start, end))
+        end = start - timedelta(days=1)
+    return out
+
+
+def _load_chunk(source, sport, start, end, mode):
+    """Games for start..end as (games, problems, mode). One request for the whole window first. If ESPN refuses
+    it (it answers HTTP 400 to date-range requests for NFL, NBA and NHL, seen live on 2026-11-23), ask one day at
+    a time: that is the call the schedule task already makes every day. `problems` is empty only when every day
+    loaded."""
+    if mode == "range":
+        try:
+            return source.fetch_range(sport, start, end), [], "range"
+        except Exception as exc:
+            if not hasattr(source, "fetch_days"):
+                return [], [f"{start} to {end}: {str(exc)[:110]}"], "range"
+    days = [start + timedelta(days=i) for i in range((end - start).days + 1)]
+    games, problems = source.fetch_days(sport, days)
+    return games, problems, "day"
+
+
+def _backfill_detail(stat):
+    how = "day by day" if stat["mode"] == "day" else "one request per 30 days"
+    out = f"{stat['loaded']} of {stat['chunks']} chunks loaded ({how})"
+    if stat["failed"]:
+        out += f"; {stat['failed']} failing, first: {str(stat['first_problem'])[:110]}"
+    return out
+
+
 def run_backfill(store, source, cfg, now, days=240, budget_minutes=10, log=print):
     """Load past games in 30-day chunks, newest first. Stops cleanly when the time budget is spent and
-    remembers finished chunks, so running it again continues instead of starting over."""
+    remembers finished chunks, so running it again continues instead of starting over. A sport whose requests
+    fail does not hold up the others: it is noted (see the Status panel) and retried on the next run."""
     import time
     started = time.monotonic()
     heartbeat(store, "backfill", now)
     today = et_day(now, cfg)
+    chunks = backfill_chunks(today, days)
     n, skipped, partial = 0, 0, False
-    done = set(get_snapshot(store, "backfill_done", []))
+    by_sport = {}
     if hasattr(source, "fetch_range"):
+        wanted = {f"{s}:{a}:{b}" for s in feeds(cfg) for a, b in chunks}
+        done = set(get_snapshot(store, "backfill_done", [])) & wanted           # tags from an older window are stale
         for sport in feeds(cfg):
-            end = today - timedelta(days=1)
-            while end > today - timedelta(days=days):
-                start = max(end - timedelta(days=29), today - timedelta(days=days))
+            stat = by_sport[sport] = {"chunks": len(chunks), "loaded": 0, "failed": 0, "mode": "range", "first_problem": None}
+            for start, end in chunks:
                 tag = f"{sport}:{start}:{end}"
                 if tag in done and end < today - timedelta(days=3):
                     skipped += 1
-                elif time.monotonic() - started > budget_minutes * 60:
+                    stat["loaded"] += 1
+                    continue
+                if time.monotonic() - started > budget_minutes * 60:
                     partial = True
                     break
+                games, problems, stat["mode"] = _load_chunk(source, sport, start, end, stat["mode"])
+                if games:
+                    n += upsert_games_bulk(store, games, now)
+                if problems:
+                    stat["failed"] += 1
+                    stat["first_problem"] = stat["first_problem"] or problems[0]
+                    log(f"backfill {sport} {start} to {end}: {len(games)} games, {len(problems)} problems, first: {problems[0][:110]}", flush=True)
+                    if not games and len(problems) > (end - start).days:        # every day failed: stop asking this sport for now
+                        break
                 else:
-                    try:
-                        games = source.fetch_range(sport, start, end)
-                        n += upsert_games_bulk(store, games, now)
-                        done.add(tag)
-                        _note_source(store, f"backfill:{sport}", True, f"{start} to {end}: {len(games)} games", now)
-                        log(f"backfill {sport} {start} to {end}: {len(games)} games", flush=True)
-                    except Exception as exc:
-                        _note_source(store, f"backfill:{sport}", False, str(exc)[:160], now)
-                        log(f"backfill {sport} {start} to {end} FAILED: {str(exc)[:120]}", flush=True)
-                end = start - timedelta(days=1)
+                    stat["loaded"] += 1
+                    done.add(tag)
+                    log(f"backfill {sport} {start} to {end}: {len(games)} games ({stat['mode']})", flush=True)
+            _note_source(store, f"backfill:{sport}", stat["failed"] == 0, _backfill_detail(stat), now)
             if partial:
                 break
         put_snapshot(store, "backfill_done", sorted(done), now)
-        failed = [k for k, v in get_snapshot(store, "sources", {}).items() if k.startswith("backfill:") and not v["ok"]]
-        if not partial and not failed:
+        if not partial and not any(v["failed"] for v in by_sport.values()):
             put_snapshot(store, "backfill_complete", {"at": iso(now), "days": days}, now)
     else:
         pairs = {(s, today - timedelta(days=d)) for s in feeds(cfg) for d in range(1, days + 1)}
         n = refresh_days(store, source, cfg, now, pairs)
     build_snapshots(store, cfg, now)
-    return {"days": days, "games_upserted": n, "chunks_already_done": skipped, "partial": partial,
-            "note": "Time budget reached. Run backfill again to continue." if partial else "Complete."}
+    failing = [s for s, v in by_sport.items() if v["failed"]]
+    return {"days": days, "games_upserted": n, "chunks_already_done": skipped, "partial": partial, "by_sport": by_sport,
+            "note": "Time budget reached. Run backfill again to continue." if partial
+            else f"Some chunks failed ({', '.join(failing)}). Run backfill again to retry them." if failing else "Complete."}
 
 
 def _row_game(row, odds):

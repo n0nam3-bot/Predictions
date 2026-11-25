@@ -11,7 +11,7 @@ This is a transparent rating model, not a proven edge. Read the **Rating check**
 ## Inputs (the facts packet)
 Every input records its source and fetch time, or the reason it is missing.
 - **Market:** the moneyline from ESPN (or the fallback odds source), with our own snapshots for line movement. No-vig probabilities use the proportional method.
-- **Ratings:** Elo from final scores stored in the database (`backfill` loads them). Margin of victory counts; each sport has its own K and home advantage in `config.yaml`. A team needs 8 stored games before it is rated.
+- **Ratings:** Elo from final scores stored in the database (`backfill` loads them). Margin of victory counts; each sport has its own K and home advantage in `config.yaml`. A team needs 8 stored games before it is rated. Preseason and off-season games are ignored (ESPN season types 1 and 4): starters rest, so those scores would distort the ratings.
 - **Rest and schedule:** calendar days off since each team’s last game (0 = back-to-back) and games in the last 7 days.
 - **Recent form:** the last 5 results with scores and goal or point difference. “Last N” uses the games actually stored.
 - **Injuries:** ESPN’s list, filtered to Out, Doubtful, Questionable and Day-To-Day. Long-term injured reserve is counted but not listed. The feed has no player value, so the size of an absence is **not measured**.

@@ -1,10 +1,10 @@
 # Data sources
 
-**Status: unverified until you run Pipeline, task `audit`.** I could not reach these services from where this was built, so the parsers were written from documented shapes and tested on synthetic fixtures only. The audit runs from GitHub’s servers, saves real samples, and tells you which feeds work.
+**Status (2026-11-23).** Proven in production: ESPN scoreboards, one request per day, with moneylines and final scores for NBA, NHL, NFL and MLB; ESPN injuries for NBA, NHL and NFL; ESPN date ranges for MLB. **ESPN answers a date-range scoreboard request with HTTP 400 for NFL, NBA and NHL** (seen on the Status panel; MLB’s works), so history for those leagues is loaded one day at a time. Not yet seen live: UFC odds and Contender Series cards. The parsers were first written from documented shapes and tested on synthetic fixtures, so the `audit` task (Pipeline, task `audit`) is still the way to probe every source from GitHub’s servers and save real samples.
 
 | Source | Used for | Notes |
 |---|---|---|
-| ESPN public JSON (`site.api.espn.com`) | Schedules, scores, odds, injuries, UFC events | Unofficial and may change or block. Used in v0. ESPN has no valid `dwcs` league address (it returns HTTP 400), so Contender Series bouts are picked out of the UFC feed by event name. If ESPN does not list them there, DWCS stays empty; the audit shows how many it found. |
+| ESPN public JSON (`site.api.espn.com`) | Schedules, scores, odds, injuries, UFC events | Unofficial and may change or block. Preseason (season type 1) and off-season (type 4) events are ignored: starters rest, so their scores would distort the ratings. Used in v0. ESPN has no valid `dwcs` league address (it returns HTTP 400), so Contender Series bouts are picked out of the UFC feed by event name. If ESPN does not list them there, DWCS stays empty; the audit shows how many it found. |
 | MLB Stats API | Probable pitchers, lineups (next step) | Probed by the audit, not used yet. |
 | NHL web API | Goalies, schedule (next step) | Probed, not used yet. |
 | NBA cdn.nba.com | Live JSON (next step) | `stats.nba.com` often blocks cloud IPs; do not depend on it. |

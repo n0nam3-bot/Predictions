@@ -1,12 +1,20 @@
-"""ESPN's public (unofficial) JSON. Parsers are defensive and the shapes are NOT yet verified against live
-responses: run the 'Source audit' task from the Actions tab and read its report before trusting them."""
+"""ESPN's public (unofficial) JSON. Parsers are defensive. Proven live (2026-11-23): one scoreboard request per
+day with moneylines and final scores for NBA, NHL, NFL and MLB, injuries for NBA, NHL and NFL, and 30-day date
+ranges for MLB only (NFL, NBA and NHL answer a range with HTTP 400, so history is loaded day by day).
+Not yet seen live: UFC odds and Contender Series cards. The 'Source audit' task probes everything."""
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 
 import requests
 
 BASE = "https://site.api.espn.com/apis/site/v2/sports/{sport}/{league}"
 UA = {"User-Agent": "picks-board/0.1 (+https://github.com)"}
+
+
+def _short(url):
+    """The part of an ESPN URL worth reading on a phone."""
+    return url.split("/sports/", 1)[-1]
 
 
 def _get(d, *path):
@@ -130,9 +138,28 @@ def parse_bouts(ev, sport_key):
     return out
 
 
+OFF_SEASON_TYPES = (1, 4)       # ESPN season types: 1 preseason, 2 regular, 3 postseason, 4 off-season (NBA play-in is 5)
+
+
+def out_of_season(ev):
+    """Preseason, exhibition and off-season games are not real results. Counting them would distort the ratings
+    (starters rest) and would post picks nobody can price. An event with no season info is kept."""
+    season = ev.get("season") if isinstance(ev, dict) else None
+    if not isinstance(season, dict):
+        return False
+    if str(season.get("slug") or "").lower() in ("preseason", "off-season", "offseason"):
+        return True
+    try:
+        return int(season.get("type")) in OFF_SEASON_TYPES
+    except (TypeError, ValueError):
+        return False
+
+
 def parse_scoreboard(raw, sport_key, kind):
     games = []
     for ev in raw.get("events", []):
+        if kind != "bout" and out_of_season(ev):
+            continue
         try:
             games.extend(parse_bouts(ev, sport_key) if kind == "bout" else [parse_team_event(ev, sport_key)])
         except (KeyError, IndexError, TypeError):
@@ -166,7 +193,7 @@ class ESPNSource:
             except requests.RequestException as exc:
                 last = str(exc)
             time.sleep(0.5 * (2 ** attempt))
-        raise RuntimeError(f"ESPN request failed: {last} ({url})")
+        raise RuntimeError(f"ESPN request failed: {last} ({_short(url)})")
 
     def _base(self, sport_key):
         sport_key = self.cfg["sports"][sport_key].get("via", sport_key)
@@ -184,6 +211,24 @@ class ESPNSource:
         feed = self.cfg["sports"][sport_key].get("via", sport_key)
         raw = self._get_json(f"{self._base(feed)}/scoreboard?dates={start:%Y%m%d}-{end:%Y%m%d}&limit=1000", attempts=2, timeout=30)
         return parse_scoreboard(raw, feed, self.cfg["sports"][feed]["kind"])
+
+    def fetch_days(self, sport_key, days, workers=4):
+        """One scoreboard request per day, a few at a time. This is the same call the schedule task makes every
+        day, so it works where a date range does not (ESPN answers range requests for NFL, NBA and NHL with HTTP 400).
+        Returns (games, problems); problems is empty only when every day loaded."""
+        def one(day):
+            try:
+                return day, self.fetch_day(sport_key, day), None
+            except Exception as exc:
+                return day, [], str(exc)
+
+        games, problems = [], []
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            for day, got, err in pool.map(one, days):
+                games.extend(got)
+                if err:
+                    problems.append(f"{day}: {err}")
+        return games, problems
 
     def fetch_injuries(self, sport_key):
         if self.cfg["sports"][sport_key]["kind"] != "team":
