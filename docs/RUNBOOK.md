@@ -7,6 +7,7 @@
 | A game has no pick and is marked missed | The tick that would have posted it ran after the start | By design nothing is posted after the start. Nothing to fix. |
 | Status panel shows a feed failing | ESPN changed or blocked | Run `audit`, open the `audit-samples` artifact, fix the parser, upload a zip. |
 | Status panel: History load says Problems, or Finished games stored is low for NFL, NBA or NHL | ESPN refused a request (it answers date ranges for those leagues with HTTP 400, so they load day by day) or a day failed | Run Pipeline, `backfill` (240 days), then read the per-sport line on the Status panel. Failed chunks are retried on every run; nothing to edit. |
+| Status panel: Gemini Failing, or analysis text is the template | Model retired (404), busy (503), out of quota (429) or timing out | Nothing to edit: models switch by themselves and rest between tries (Status shows “Cooling down”). Add `MISTRAL_API_KEY` or `OPENROUTER_API_KEY` as a fallback. If every model says 404, update the names in `config.yaml`. |
 | Ledger check shows problems | Database and git export disagree | Do not edit anything. Run `verify`; compare the named line with `data/ledger/`. |
 | Inbox log says tests failed | The zip broke something | Main is untouched and the zip moved to `inbox/failed/`. Fix and upload a new zip. |
 | Deploy not confirmed | Vercel blocked the commit author, or `SITE_URL` is wrong | Check the Vercel project uses your GitHub login; check the variable. |

@@ -19,6 +19,16 @@ def _ago(now, iso_s):
     return f"{m} min ago" if m < 120 else f"{m // 60} h ago"
 
 
+def _cooling(cool, name, now):
+    """' Cooling down: model (back in 4 min).' for the provider's models that are on a cooldown."""
+    t, out = iso(now), []
+    for k, v in sorted(cool.items()):
+        if k.startswith(name + "/") and v.get("until", "") > t:
+            mins = max(1, round((parse_utc(v["until"]) - parse_utc(now)).total_seconds() / 60))
+            out.append(f"{k.split('/', 1)[1]} (back in {mins} min)" if mins < 120 else f"{k.split('/', 1)[1]} (back in {mins // 60} h)")
+    return (" Cooling down: " + ", ".join(out) + ".") if out else ""
+
+
 def compute(store, cfg, now, env):
     now = parse_utc(now)
     items = []
@@ -41,12 +51,15 @@ def compute(store, cfg, now, env):
     lo, hi = iso(now - timedelta(hours=1)), iso(now + timedelta(hours=36))
     rows = store.q("SELECT odds_json FROM games WHERE kind = 'team' AND status = 'scheduled' AND start_utc BETWEEN ? AND ?", (lo, hi))
     with_ml = sum(1 for r in rows if r["odds_json"] and json.loads(r["odds_json"]).get("home_ml") is not None)
+    key = (env.get("ODDS_API_KEY") or "").strip()
     if not rows:
         add("Odds", "ESPN odds", "idle", "No upcoming team games to check.")
+    elif key and with_ml < len(rows):
+        add("Odds", "ESPN odds", "ok" if with_ml else "warn",
+            f"{with_ml} of {len(rows)} upcoming games have a moneyline. The Odds API fills in the rest when they come due.")
     else:
         add("Odds", "ESPN odds", "ok" if with_ml == len(rows) else "warn" if with_ml else "bad",
             f"{with_ml} of {len(rows)} upcoming games have a moneyline." + ("" if with_ml else " Add the ODDS_API_KEY secret for a fallback."))
-    key = (env.get("ODDS_API_KEY") or "").strip()
     used = store.q("SELECT used, cap FROM quota WHERE key = ?", (f"oddsapi:{iso(now)[:7]}",))
     sources = _snap(store, "sources", {})
     odds_err = [f"{k.split(':')[1]}: {v['detail']}" for k, v in sources.items() if k.startswith("odds:") and not v["ok"]]
@@ -62,6 +75,7 @@ def compute(store, cfg, now, env):
 
     # --- AI text
     st = _snap(store, "llm_status", {})
+    cool = _snap(store, "llm_cooldown", {})
     today = iso(now)[:10]
     quota = {r["key"].split(":")[1]: r for r in store.q("SELECT * FROM quota WHERE key LIKE ?", (f"llm:%:{today}",))}
     working = []
@@ -74,10 +88,15 @@ def compute(store, cfg, now, env):
         elif name == "cloudflare" and ":" not in val:
             add("AI text", label, "bad", "The value must look like ACCOUNT_ID:API_TOKEN.")
         elif info.get("error_utc") and info["error_utc"] >= info.get("ok_utc", ""):
-            add("AI text", label, "bad", f"Last call failed: {info['error'][:120]}. If it says 404, the model name in config.yaml is out of date.")
+            conf = cfg.get("llm", {}).get(name, {})
+            many = len(conf.get("models") or []) > 1 or conf.get("discover")
+            add("AI text", label, "bad", f"Last call failed: {info['error'][:120]}.{_cooling(cool, name, now)} "
+                + ("It switches models by itself. If it says 404, a model name in config.yaml is out of date." if many
+                   else "If it says 404, the model name in config.yaml is out of date."))
         elif info.get("ok_utc"):
             working.append(label)
-            add("AI text", label, "ok", f"Working. {q['used'] if q else 0} of {cap} calls today, last success {_ago(now, info['ok_utc'])}.")
+            add("AI text", label, "ok", f"Working. {q['used'] if q else 0} of {cap} calls today, last success {_ago(now, info['ok_utc'])}"
+                + (f" ({info['ok_model']})" if info.get("ok_model") else "") + f".{_cooling(cool, name, now)}")
         else:
             add("AI text", label, "idle", "Key is set. Not called yet: it is used when a pick is posted.")
     add("AI text", "Analysis text comes from", "ok" if working else "idle", working[0] if working else "The built-in template (no AI provider has succeeded yet).")

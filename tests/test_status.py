@@ -120,4 +120,15 @@ def test_gemini_error_text_comes_through():
             raise AssertionError("should fail")
     finally:
         requests.post = orig
-    assert CFG["llm"]["gemini"]["model"] == "gemini-flash-latest"
+    gem = CFG["llm"]["gemini"]
+    assert gem["models"][0] == "gemini-flash-latest" and len(gem["models"]) > 1 and "gemini-2.5-flash" not in gem["models"]
+    assert gem["discover"] is True
+
+
+def test_espn_odds_row_is_calm_when_the_odds_api_will_fill_the_gaps():
+    s = mkstore()
+    start = T0 + timedelta(hours=2)
+    pipeline.upsert_game(s, game("a", start), T0)
+    pipeline.upsert_game(s, game("b", start, odds=None), T0)
+    d = items(status.compute(s, CFG, T0, {"ODDS_API_KEY": "k"}))
+    assert d["ESPN odds"]["state"] == "ok" and "1 of 2" in d["ESPN odds"]["detail"] and "Odds API fills in the rest" in d["ESPN odds"]["detail"]

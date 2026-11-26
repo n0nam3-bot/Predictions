@@ -96,10 +96,38 @@ def test_chain_order_budget_and_no_groq(monkeypatch):
     env = {"GEMINI_API_KEY": "a", "MISTRAL_API_KEY": "b", "OPENROUTER_API_KEY": "c", "GROQ_API_KEY": "nope"}
     chain = llm.Chain(s, CFG, "2026-11-15T12:00:00Z", env, providers)
     assert [p[0] for p in chain.available()] == ["gemini", "mistral", "openrouter"]
-    assert chain.generate("s", "u") == ("{}", "mistral") and calls == ["gemini", "mistral"]
+    gem_models = len(CFG["llm"]["gemini"]["models"])
+    assert chain.generate("s", "u") == ("{}", "mistral") and calls == ["gemini"] * gem_models + ["mistral"]   # every Gemini model is tried first
     assert "groq" not in {p[0] for p in llm.PROVIDERS} and "groq" not in CFG["llm"]
     s.x("UPDATE quota SET used = 999 WHERE key LIKE 'llm:mistral:%'")
     calls.clear()
     assert chain.generate("s", "u")[1] == "openrouter"
     with pytest.raises(llm.LLMUnavailable):
         llm.Chain(s, CFG, "2026-11-15T12:00:00Z", {}, providers).generate("s", "u")
+
+
+def test_the_template_passes_the_validator_even_when_no_value_happens_to_be_seven():
+    """The text says "Games in the last 7 days". The validator rejects any number that is not in the data, so the 7 must be
+    data: before it was, AI text that kept that sentence was rejected unless some score or record happened to contain a 7."""
+    from datetime import datetime, timedelta, timezone
+    s = mkstore()
+    base = datetime(2026, 11, 13, 20, 0, tzinfo=timezone.utc)
+    k = 0
+    for team, wins in (("Harbor City Anglers", 6), ("Lakeview Herons", 4)):
+        for i in range(10):
+            k += 1
+            won = i < wins
+            when = (base - timedelta(days=3 * (i + 1))).strftime("%Y-%m-%dT%H:%M:%SZ")
+            add_game(s, f"h{k}", team, f"Past Opp {i}", when, "final", "home" if won else "away", sport="nba",
+                     hs=104 if won else 99, as_=99 if won else 104)
+    add_game(s, "g1", "Harbor City Anglers", "Lakeview Herons", "2026-11-14T00:00:00Z",
+             odds={"home_ml": -110, "away_ml": -110, "book": "Demo Book", "source": "demo"})
+    g = s.q("SELECT * FROM games WHERE id='g1'")[0]
+    p = facts.build_packet(s, g, "2026-11-13T23:30:00Z")
+    assert p["inputs"]["schedule_rest"]["value"]["window_days"] == 7
+    m = model.project(p, CFG)
+    cov = facts.coverage(p, CFG["coverage_weights"])
+    d = {**decide.decide(p, m, cov, CFG), "coverage": cov}
+    n = narrative.template(p, m, d)
+    assert "last 7 days" in n["context"]
+    assert narrative.validate_all(n, p, m, d) == []

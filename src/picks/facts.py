@@ -100,7 +100,8 @@ def build_packet(store, game, now, cfg=None, cache=None):
             inputs["schedule_rest"] = _input({"home_days_off": hs["days_off"], "away_days_off": as_["days_off"],
                                               "home_back_to_back": hs["days_off"] == 0, "away_back_to_back": as_["days_off"] == 0,
                                               "home_games_in_last_7_days": hs["games_in_last_7_days"],
-                                              "away_games_in_last_7_days": as_["games_in_last_7_days"]}, "stored schedule", now_iso)
+                                              "away_games_in_last_7_days": as_["games_in_last_7_days"],
+                                              "window_days": 7}, "stored schedule", now_iso)           # the 7 in "last 7 days" is data, so the validator allows it
             inputs["recent_form"] = _input({"home": _form(hh, home), "away": _form(ah, away)}, "stored final scores", now_iso)
         else:
             why = "no earlier games stored for one of the teams; run the backfill task"
