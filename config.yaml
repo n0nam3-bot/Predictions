@@ -49,4 +49,4 @@ llm:                          # free tiers only, tried in this order. Groq is no
   gemini:     {models: [gemini-flash-latest, gemini-flash-lite-latest], discover: true, daily_cap: 400}   # the "latest" names are aliases Google keeps current
   mistral:    {model: mistral-small-latest, daily_cap: 300}
   cloudflare: {model: "@cf/meta/llama-3.1-8b-instruct", daily_cap: 100}
-  openrouter: {model: "openrouter/free", daily_cap: 40}
+  openrouter: {model: "openrouter/free", daily_cap: 50}   # free models: 50 requests a day

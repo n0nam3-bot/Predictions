@@ -70,5 +70,11 @@
   "name": "picks-board-v0.3.6.zip",
   "applied_utc": "2026-11-26T04:30:33Z",
   "changes": 13
+ },
+ {
+  "sha256": "bb06d0a157290b66c307c3c2e66470c68e26160a702c5150b253b8ad109e4d3b",
+  "name": "picks-board-v0.3.7.zip",
+  "applied_utc": "2026-11-28T02:11:06Z",
+  "changes": 17
  }
 ]

@@ -14,7 +14,7 @@ def et_date(start_utc, tz="America/New_York"):
 
 
 def _blank():
-    return {"w": 0, "l": 0, "v": 0, "pending": 0, "win_pct": None, "units": 0.0, "roi": None}
+    return {"w": 0, "l": 0, "v": 0, "pending": 0, "win_pct": None, "units": 0.0, "risked": 0.0, "roi": None}
 
 
 def _add(bucket, row):
@@ -26,7 +26,7 @@ def _add(bucket, row):
         elif g == "L":
             bucket["units"] -= row.get("units", 1)
         if g in ("W", "L"):
-            bucket["risked"] = bucket.get("risked", 0) + row.get("units", 1)
+            bucket["risked"] += row.get("units", 1)
     else:
         bucket["pending"] += 1
 
@@ -34,9 +34,10 @@ def _add(bucket, row):
 def _finish(bucket):
     decided = bucket["w"] + bucket["l"]
     bucket["win_pct"] = round(100 * bucket["w"] / decided, 1) if decided else None
-    risked = bucket.pop("risked", 0)
+    risked = bucket["risked"]
     bucket["roi"] = round(100 * bucket["units"] / risked, 1) if risked else None
     bucket["units"] = round(bucket["units"], 2)
+    bucket["risked"] = round(risked, 2)            # units staked on decided (won or lost) plays; voids return the stake
     return bucket
 
 

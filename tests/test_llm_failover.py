@@ -225,3 +225,18 @@ def test_the_wait_time_survives_in_the_error_message(monkeypatch):
     with pytest.raises(llm.LLMUnavailable) as exc:
         llm.call_gemini("k", GEM[0], "s", "u")
     assert llm.retry_after(exc.value) == 33.5 and llm.classify(exc.value) == ("quota", 60)
+
+
+def test_a_subscription_required_error_rests_the_provider_for_hours():
+    """Mistral answered HTTP 402 "You need a subscription to access this API" on the owner's Status panel."""
+    err = llm.LLMUnavailable("HTTP 402: You need a subscription to access this API.")
+    assert llm.classify(err) == ("auth", 21600)
+    s = mkstore()
+    sc = Script({("mistral", MIS): err})
+    with pytest.raises(llm.LLMUnavailable):
+        llm.Chain(s, CFG, T0, {"MISTRAL_API_KEY": "k"}, sc.providers()).generate("s", "u")
+    assert snap(s, "llm_cooldown")[f"mistral/{MIS}"]["until"] == iso(T0 + timedelta(hours=6))
+    sc.calls.clear()
+    with pytest.raises(llm.LLMUnavailable, match="cooling down"):
+        llm.Chain(s, CFG, T0 + timedelta(hours=1), {"MISTRAL_API_KEY": "k"}, sc.providers()).generate("s", "u")
+    assert sc.calls == []

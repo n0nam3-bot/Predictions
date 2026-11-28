@@ -27,6 +27,7 @@
    "pending": 1,
    "win_pct": 75.0,
    "units": 3.33,
+   "risked": 12.0,
    "roi": 27.8
   },
   "overall": {
@@ -36,6 +37,7 @@
    "pending": 1,
    "win_pct": 60.8,
    "units": 9.79,
+   "risked": 72.0,
    "roi": 13.6
   },
   "top_picks": {
@@ -45,6 +47,7 @@
    "pending": 0,
    "win_pct": 66.7,
    "units": 6.52,
+   "risked": 29.0,
    "roi": 22.5
   },
   "by_sport": {
@@ -55,6 +58,7 @@
     "pending": 0,
     "win_pct": 53.8,
     "units": 0.16,
+    "risked": 22.0,
     "roi": 0.7
    },
    "nba": {
@@ -64,6 +68,7 @@
     "pending": 1,
     "win_pct": 70.6,
     "units": 6.63,
+    "risked": 22.0,
     "roi": 30.1
    },
    "nhl": {
@@ -73,6 +78,7 @@
     "pending": 0,
     "win_pct": 57.1,
     "units": 3.0,
+    "risked": 28.0,
     "roi": 10.7
    }
   },
@@ -1479,7 +1485,7 @@
   },
   "backtest": {},
   "integrations": {
-   "version": "0.3.4",
+   "version": "0.3.6",
    "generated_utc": "2026-11-16T03:45:00Z",
    "items": [
     {
@@ -1582,7 +1588,7 @@
      "group": "System",
      "name": "Pipeline version",
      "state": "info",
-     "detail": "0.3.4"
+     "detail": "0.3.6"
     }
    ]
   },

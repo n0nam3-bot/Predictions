@@ -1,18 +1,19 @@
 (function () {
   'use strict';
+  const L = window.PicksLib;
   const SPORTS = { nfl: 'NFL', nba: 'NBA', nhl: 'NHL', mlb: 'MLB', ufc: 'UFC', dwcs: 'DWCS' };
-  const SITE_VERSION = '0.3.6';
+  const SITE_VERSION = '0.3.7';
   const params = new URLSearchParams(location.search);
   const localHost = ['localhost', '127.0.0.1', ''].includes(location.hostname);
   const state = { tz: 'America/New_York', date: null, filter: 'all', latest: null, days: {}, loading: true, error: '', open: new Set(),
-    offset: 0, statusOpen: false, health: null, demo: false, animate: true, banner: '', loadError: '' };
+    offset: 0, statusOpen: false, health: null, demo: false, animate: true, banner: '', loadError: '', sec: {} };
 
   const $ = (s) => document.querySelector(s);
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const now = () => Date.now() + state.offset;
   const odds = (n) => (n == null ? '' : n > 0 ? '+' + Math.round(n) : '\u2212' + Math.abs(Math.round(n)));
   const pct = (x) => (x * 100).toFixed(1) + '%';
-  const units = (u) => (u > 0 ? '+' : u < 0 ? '\u2212' : '') + Math.abs(u).toFixed(2) + 'u';
+  const units = (u) => L.signed(u);
   const dash = '\u2013';
   const wlv = (b) => b.w + dash + b.l + dash + b.v;
   const etKey = (ms) => new Intl.DateTimeFormat('en-CA', { timeZone: state.tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(ms));
@@ -102,31 +103,57 @@
     return b;
   }
 
+  function stat(k, v, s, cls) {
+    return '<div class="stat"><span class="k">' + k + '</span><span class="val' + (cls ? ' ' + cls : '') + '">' + v + '</span><span class="s">' + (s || '&nbsp;') + '</span></div>';
+  }
+
+  function recordPanel(ov) {
+    if (!ov) return '';
+    const decided = ov.w + ov.l;
+    const profit = decided ? stat('Profit', units(ov.units), ov.risked ? 'on ' + L.plain(ov.risked) + 'u risked' : '', ov.units >= 0 ? 'pos' : 'neg') : stat('Profit', '0.00u', 'no graded plays yet');
+    const roi = ov.roi != null ? stat('ROI', (ov.roi > 0 ? '+' : ov.roi < 0 ? '\u2212' : '') + Math.abs(ov.roi).toFixed(0) + '%', 'profit per unit risked', ov.roi >= 0 ? 'pos' : 'neg') : stat('ROI', '\u2014', 'profit per unit risked');
+    return '<p class="hero-cap">' + (state.filter === 'all' ? 'All sports' : SPORTS[state.filter]) + ' record since launch</p><div class="stats">' +
+      stat('Record', wlv(ov), ov.win_pct != null ? ov.win_pct + '% won' : 'won\u2013lost\u2013void') + profit + roi + '</div>';
+  }
+
+  function unitsNote() {
+    return '<details class="units-note" data-sec="units"' + (state.sec.units ? ' open' : '') + '><summary>How units work</summary><p>A unit is a standard bet size; many bettors use 1% of their bankroll. ' +
+      'Each play shows a <b>suggested risk</b> of 1 to 3 units, more when the edge and the data behind it are stronger. <b>To win</b> is the profit at the posted price. ' +
+      'Profit is counted in units, and ROI is profit divided by the units risked. This is information, not advice: only risk what you can afford to lose.</p></details>';
+  }
+
   function renderSummary(all, games) {
     const el = $('#summary');
-    if (!all) { el.innerHTML = '<h1>&nbsp;</h1>'; return; }
+    if (!all) { el.innerHTML = '<div class="hero"><h1>&nbsp;</h1></div>'; return; }
     const plays = games.filter((g) => g.pick && g.pick.verdict === 'PLAY');
     const analysed = games.filter((g) => g.pick).length;
+    const passedN = games.filter((g) => g.pick && g.pick.verdict !== 'PLAY').length;
     const rec = dayRecord(games);
     const label = state.filter === 'all' ? '' : SPORTS[state.filter] + ' ';
-    let h, p;
-    if (!games.length) { h = 'No ' + label + 'games ' + when(state.date); p = state.date > today() ? 'The schedule for this day has not been published yet.' : 'Nothing is stored for this day. Leagues in their off-season simply have no games.'; }
-    else if (plays.length) {
+    let h, sub;
+    if (!games.length) {
+      h = 'No ' + label + 'games ' + when(state.date);
+      sub = esc(state.date > today() ? 'The schedule for this day has not been published yet.' : 'Nothing is stored for this day. Leagues in their off-season simply have no games.');
+    } else if (plays.length) {
       h = plays.length + ' ' + label + (plays.length === 1 ? 'play ' : 'plays ') + when(state.date);
-      const bits = [games.length + (games.length === 1 ? ' game' : ' games')];
-      if (rec.w + rec.l + rec.v) bits.push(rec.w + ' won, ' + rec.l + ' lost' + (rec.v ? ', ' + rec.v + ' void' : ''));
+      const bits = [];
+      if (rec.w + rec.l + rec.v) { bits.push(rec.w + ' won', rec.l + ' lost'); if (rec.v) bits.push(rec.v + ' void'); }
       if (rec.pending) bits.push(rec.pending + ' to settle');
-      p = esc(bits.join('. ')) + '.' + (rec.w + rec.l ? ' <span class="' + (rec.units >= 0 ? 'pos' : 'neg') + '">' + units(rec.units) + '</span>' : '');
+      if (passedN) bits.push(passedN + ' passed');
+      sub = esc(bits.join(' \u00b7 ')) + (rec.w + rec.l ? ' \u00b7 <span class="' + (rec.units >= 0 ? 'pos' : 'neg') + '">' + units(rec.units) + '</span>' : '');
     } else if (analysed) {
-      h = 'No ' + label + 'plays ' + when(state.date); p = analysed + ' of ' + games.length + ' games analysed, and every one was a pass.';
+      h = 'No ' + label + 'plays ' + when(state.date);
+      let s = analysed + ' of ' + games.length + ' games analysed, and every one was a pass.';
       const best = games.filter((g) => g.pick && g.pick.edge != null && g.pick.lean_name).sort((a, b) => b.pick.edge - a.pick.edge)[0];
       const min = state.latest && state.latest.thresholds ? state.latest.thresholds.play_min_edge : 0.025;
-      if (best) p += ' Closest to a play: ' + best.pick.lean_name + ' at ' + (best.pick.edge >= 0 ? '+' : '\u2212') + Math.abs(best.pick.edge * 100).toFixed(1) + '% edge, against a ' + (min * 100).toFixed(1) + '% minimum.';
+      if (best) s += ' Closest to a play: ' + best.pick.lean_name + ' at ' + (best.pick.edge >= 0 ? '+' : '\u2212') + Math.abs(best.pick.edge * 100).toFixed(1) + '% edge, against a ' + (min * 100).toFixed(1) + '% minimum.';
+      sub = esc(s);
+    } else {
+      h = games.length + ' ' + label + (games.length === 1 ? 'game ' : 'games ') + when(state.date);
+      sub = esc('Analysis posts about 30 minutes before each game and 90 minutes before the first fight on a card.');
     }
-    else { h = games.length + ' ' + label + (games.length === 1 ? 'game ' : 'games ') + when(state.date); p = 'Analysis posts about 30 minutes before each game and 90 minutes before the first fight on a card.'; }
     const ov = state.latest && state.latest.records && (state.filter === 'all' ? state.latest.records.overall : (state.latest.records.by_sport || {})[state.filter]);
-    const record = ov ? '<div class="record"><span>Overall <b>' + wlv(ov) + '</b>' + (ov.win_pct != null ? ', ' + ov.win_pct + '%' : '') + (ov.units ? ', ' + units(ov.units) : '') + '</span></div>' : '';
-    el.innerHTML = '<h1>' + esc(h) + '</h1><p>' + (p.includes('<span') ? p : esc(p)) + '</p>' + record;
+    el.innerHTML = '<div class="hero"><h1>' + esc(h) + '</h1><p class="hero-sub">' + sub + '</p>' + recordPanel(ov) + unitsNote() + '</div>';
   }
 
   function renderTabs(all) {
@@ -149,15 +176,32 @@
       '. Inputs: ' + inputs + '. Posted ' + esc(clock(p.published_utc)) + (p.tag === 'LATE' ? ' (late)' : '') + ', locked as <code>' + esc(p.hash) + '</code>.</p>';
   }
 
+  function playCard(g) {
+    const p = g.pick, open = state.open.has(g.id);
+    const gr = g.grade && ['W', 'L', 'V'].includes(g.grade.grade) ? g.grade : null;
+    const cls = gr ? { W: 'won', L: 'lost', V: 'void' }[gr.grade] : 'pend';
+    const vs = g.kind === 'bout' ? 'vs ' + esc(p.selection === 'home' ? g.away : g.home) : p.selection === 'home' ? 'vs ' + esc(g.away) : 'at ' + esc(g.home);
+    const stateChip = gr ? '<span class="c-result ' + cls + '">' + { W: 'WON', L: 'LOST', V: 'VOID' }[gr.grade] + '</span>'
+      : g.status === 'in_progress' ? '<span class="chip live push">Live</span>' : g.status === 'final' ? '<span class="chip live push">Checking</span>' : '';
+    const bars = [1, 2, 3].map((i) => '<i' + (i <= L.meter(p.units) ? ' class="on"' : '') + '></i>').join('');
+    const win = L.toWin(p.odds, p.units);
+    const second = gr
+      ? '<span class="tile"><span class="k">Result</span><span class="val ' + (gr.grade === 'W' ? 'pos' : gr.grade === 'L' ? 'neg' : '') + '">' + (gr.grade === 'V' ? 'Void' : units(gr.profit_units || 0)) + '</span></span>'
+      : '<span class="tile"><span class="k">To win</span><span class="val">' + (win == null ? '\u2014' : L.plain(win) + 'u') + '</span></span>';
+    const edge = p.edge != null ? '<span class="tile"><span class="k">Edge</span><span class="val">' + (p.edge >= 0 ? '+' : '\u2212') + Math.abs(p.edge * 100).toFixed(1) + '%</span></span>' : '';
+    const why = p.model_prob != null && p.market_prob != null ? '<span class="c-why">Win chance: our model ' + pct(p.model_prob) + ', the market ' + pct(p.market_prob) + '.</span>' : '';
+    return '<article class="card ' + cls + '"><button type="button" class="card-btn" data-id="' + esc(g.id) + '" aria-expanded="' + open + '">' +
+      '<span class="c-meta"><span class="chip">' + esc(SPORTS[g.sport]) + '</span><span class="c-time">' + esc(clock(g.start_utc)) + '</span>' + (p.top_pick ? '<span class="chip top">\u2605 Top pick</span>' : '') + stateChip + '</span>' +
+      '<span class="c-pick"><span class="c-name">' + esc(p.selection_name) + '</span><span class="c-odds">' + odds(p.odds) + '</span></span><span class="c-vs">' + vs + '</span>' +
+      '<span class="tiles"><span class="tile risk"><span class="k">' + (gr ? 'Risked' : 'Risk') + '</span><span class="val">' + L.plain(p.units) + 'u</span><span class="meter">' + bars + '</span></span>' + second + edge + '</span>' + why +
+      '<span class="c-foot"><span>Confidence ' + esc(p.confidence) + ' of 10</span><span class="c-more"><span class="mo-closed">Full analysis \u25BE</span><span class="mo-open">Hide \u25B4</span></span></span></button>' +
+      '<div class="panel" data-open="' + open + '"><div><div class="detail">' + detail(g) + '</div></div></div></article>';
+  }
+
   function row(g, kind) {
     const p = g.pick; const open = state.open.has(g.id);
     let l1, l2 = '', out = '';
-    if (kind === 'plays') {
-      l1 = esc(p.selection_name) + ' ' + odds(p.odds);
-      l2 = (p.top_pick ? '<span class="top">Top pick</span>, ' : '') + (g.kind === 'bout' ? 'vs ' + esc(p.selection === 'home' ? g.away : g.home) : p.selection === 'home' ? 'vs ' + esc(g.away) : 'at ' + esc(g.home));
-      if (g.grade && ['W', 'L', 'V'].includes(g.grade.grade)) out = '<span class="big ' + g.grade.grade.toLowerCase() + '">' + g.grade.grade + '</span><span class="sub">' + (g.grade.grade === 'V' ? 'void' : units(g.grade.profit_units || 0)) + '</span>';
-      else out = '<span class="big">' + p.units + 'u</span>' + (g.status === 'in_progress' ? '<span class="sub">Live</span>' : g.status === 'final' ? '<span class="sub">Checking</span>' : '');
-    } else if (kind === 'passed') {
+    if (kind === 'passed') {
       const sig = (p.signals || []).join(', ');
       l1 = esc(away(g));
       l2 = p.lean_name ? 'Leans ' + esc(p.lean_name) + (p.lean_side ? ' (' + p.lean_side + ')' : '') + (sig ? ', ' + esc(sig) : '') : esc(p.reason || 'No edge');
@@ -191,9 +235,16 @@
     const passed = allPassed.filter((g) => g.pick.model_prob != null).sort((a, b) => ((b.pick.edge == null ? -9 : b.pick.edge) - (a.pick.edge == null ? -9 : a.pick.edge)) || (a.start_utc < b.start_utc ? -1 : 1));
     const waiting = f.filter((g) => !g.pick && !g.missed && g.status === 'scheduled');
     const other = f.filter((g) => !g.pick && !(!g.missed && g.status === 'scheduled'));
-    const group = (title, list, kind, cls, note) => (list.length ? '<section class="group ' + cls + '"><h2>' + title + ' ' + list.length + (note ? '<span class="note">' + note + '</span>' : '') + '</h2>' + list.map((g) => row(g, kind)).join('') + '</section>' : '');
-    el.innerHTML = '<div class="' + (state.animate ? 'enter' : '') + '">' + group('Plays', plays, 'plays', 'plays') + group('Passed', passed, 'passed', 'quiet', 'largest edge first') + (bare.length ? '<details class="group quiet bare"><summary>' + bare.length + (bare.length === 1 ? ' game' : ' games') + ' without odds or enough data</summary>' + bare.map((g) => row(g, 'passed')).join('') + '</details>' : '') +
-      group('Waiting for analysis', waiting, 'waiting', 'quiet') + group('Not analysed', other, 'other', 'quiet') + '</div>';
+    const rows = (list, kind) => '<div class="group-card">' + list.map((g) => row(g, kind)).join('') + '</div>';
+    const section = (title, count, body, note) => '<section class="group"><h2>' + title + ' <span class="count">' + count + '</span>' + (note ? '<span class="note">' + note + '</span>' : '') + '</h2>' + body + '</section>';
+    const fold = (sec, title, count, body, note, dflt) => '<details class="fold" data-sec="' + sec + '"' + ((state.sec[sec] == null ? dflt : state.sec[sec]) ? ' open' : '') + '><summary><span>' + title + '</span>' +
+      (count !== '' ? ' <span class="count">' + count + '</span>' : '') + (note ? '<span class="note">' + note + '</span>' : '') + '</summary>' + body + '</details>';
+    el.innerHTML = '<div class="' + (state.animate ? 'enter' : '') + '">' +
+      (plays.length ? section('Plays', plays.length, plays.map(playCard).join(''), 'suggested risk on each pick') : '') +
+      (passed.length ? fold('passed', 'Passed', passed.length, rows(passed, 'passed'), 'no bet recommended', !plays.length) : '') +
+      (bare.length ? fold('bare', bare.length + (bare.length === 1 ? ' game' : ' games') + ' without odds or enough data', '', rows(bare, 'passed'), '', false) : '') +
+      (waiting.length ? section('Waiting for analysis', waiting.length, rows(waiting, 'waiting')) : '') +
+      (other.length ? section('Not analysed', other.length, rows(other, 'other')) : '') + '</div>';
     if (!f.length) el.innerHTML = '';
   }
 
@@ -276,11 +327,12 @@
     document.addEventListener('click', (e) => {
       const tab = e.target.closest('.tab'); if (tab) return setFilter(tab.dataset.sport);
       if (e.target.closest('#retry')) { state.error = ''; state.loading = true; render(); loadDay(state.date, true).then(render); return; }
-      const btn = e.target.closest('.row-btn[data-id]'); if (!btn) return;
+      const btn = e.target.closest('.row-btn[data-id], .card-btn[data-id]'); if (!btn) return;
       const id = btn.dataset.id; const panel = btn.nextElementSibling; const open = !state.open.has(id);
       open ? state.open.add(id) : state.open.delete(id);
       btn.setAttribute('aria-expanded', String(open)); panel.dataset.open = String(open);
     });
+    document.addEventListener('toggle', (e) => { const d = e.target; if (d && d.dataset && d.dataset.sec) state.sec[d.dataset.sec] = d.open; }, true);
     window.addEventListener('hashchange', () => { const x = readHash(); if (validKey(x.d)) setDate(x.d); else if (!x.d && state.date !== today()) setDate(today()); if (x.s && SPORTS[x.s] && x.s !== state.filter) setFilter(x.s); });
     const refresh = async () => { if (document.hidden) return; await loadLatest(); if (state.date > addDays(today(), -1) && state.date !== today()) await loadDay(state.date, true); render(); };
     document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });

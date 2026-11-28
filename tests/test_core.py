@@ -129,3 +129,18 @@ def test_records_today_overall_sport_top_and_streak():
 def test_et_day_boundary():
     # 02:00 UTC Nov 16 is still Nov 15 in New York
     assert str(records.et_date("2026-11-16T02:00:00Z")) == "2026-11-15"
+
+
+def test_records_report_units_risked_and_roi():
+    """Profit alone is hard to read when stakes differ (1 to 3 units): show what was risked too. Voids return the stake."""
+    now = "2026-11-15T18:00:00Z"
+    rows = [row("2026-11-14T00:30:00Z", "W", odds=-110, units=1), row("2026-11-14T23:00:00Z", "L", units=1),
+            row("2026-11-15T17:00:00Z", "W", "nhl", +150, 2), row("2026-11-15T19:00:00Z", "V", units=3),
+            row("2026-11-15T23:00:00Z", None, units=2)]
+    rec = records.build_records(rows, now)
+    o = rec["overall"]
+    assert o["risked"] == 4.0                                           # 1 + 1 + 2; the void and the pending play are not counted
+    assert o["units"] == pytest.approx(0.909 - 1 + 3.0, abs=0.01)
+    assert o["roi"] == pytest.approx(100 * o["units"] / 4.0, abs=0.1)
+    assert rec["by_sport"]["nhl"]["risked"] == 2.0 and rec["today"]["risked"] == 2.0
+    assert records.build_records([], now)["overall"]["risked"] == 0.0 and records.build_records([], now)["overall"]["roi"] is None

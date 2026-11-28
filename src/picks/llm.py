@@ -115,6 +115,8 @@ def classify(exc):
     low = msg.lower()
     m = re.match(r"HTTP (\d{3})", msg)
     code = int(m.group(1)) if m else 0
+    if code == 402 or "need a subscription" in low or "payment required" in low:
+        return "auth", 21600                         # the account needs a plan or credit: nothing to retry for hours
     if code in (401, 403) or "api key not valid" in low:
         return "auth", 3600
     if code == 404 or "is not found" in low:
